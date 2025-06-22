@@ -1,0 +1,531 @@
+{
+  "user": {
+    "id": "user_001",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    "preferences": {
+      "currency": "USD",
+      "timezone": "America/New_York",
+      "notifications": {
+        "email": true,
+        "push": true,
+        "sms": false
+      },
+      "privacy": {
+        "showBalance": true,
+        "showAmounts": true
+      }
+    },
+    "accounts": [
+      {
+        "id": "acc_001",
+        "name": "Main Checking",
+        "type": "checking",
+        "balance": 8475.50,
+        "currency": "USD",
+        "accountNumber": "****1234",
+        "bank": "Chase Bank",
+        "isActive": true
+      },
+      {
+        "id": "acc_002",
+        "name": "Savings Account",
+        "type": "savings",
+        "balance": 4372.00,
+        "currency": "USD",
+        "accountNumber": "****5678",
+        "bank": "Chase Bank",
+        "isActive": true
+      },
+      {
+        "id": "acc_003",
+        "name": "Credit Card",
+        "type": "credit",
+        "balance": -1250.75,
+        "currency": "USD",
+        "accountNumber": "****9012",
+        "bank": "Chase Bank",
+        "creditLimit": 10000,
+        "isActive": true
+      }
+    ]
+  },
+  "transactions": {
+    "all": [
+      {
+        "id": "txn_001",
+        "type": "expense",
+        "category": "Groceries",
+        "subcategory": "Food & Beverages",
+        "amount": -67.50,
+        "currency": "USD",
+        "date": "2024-01-21",
+        "description": "Whole Foods Market",
+        "merchant": "Whole Foods",
+        "accountId": "acc_001",
+        "tags": ["essential", "food"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-21T10:30:00Z",
+        "updatedAt": "2024-01-21T10:30:00Z"
+      },
+      {
+        "id": "txn_002",
+        "type": "income",
+        "category": "Salary",
+        "subcategory": "Employment",
+        "amount": 3200.00,
+        "currency": "USD",
+        "date": "2024-01-20",
+        "description": "Monthly Salary",
+        "merchant": "Tech Corp Inc",
+        "accountId": "acc_001",
+        "tags": ["salary", "regular"],
+        "recurring": true,
+        "recurringId": "rec_001",
+        "status": "completed",
+        "createdAt": "2024-01-20T09:00:00Z",
+        "updatedAt": "2024-01-20T09:00:00Z"
+      },
+      {
+        "id": "txn_003",
+        "type": "expense",
+        "category": "Dining",
+        "subcategory": "Restaurants",
+        "amount": -32.50,
+        "currency": "USD",
+        "date": "2024-01-20",
+        "description": "Pizza Palace",
+        "merchant": "Pizza Palace",
+        "accountId": "acc_001",
+        "tags": ["dining", "entertainment"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-20T19:30:00Z",
+        "updatedAt": "2024-01-20T19:30:00Z"
+      },
+      {
+        "id": "txn_004",
+        "type": "expense",
+        "category": "Transportation",
+        "subcategory": "Fuel",
+        "amount": -45.00,
+        "currency": "USD",
+        "date": "2024-01-19",
+        "description": "Shell Station",
+        "merchant": "Shell",
+        "accountId": "acc_001",
+        "tags": ["transportation", "essential"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-19T16:45:00Z",
+        "updatedAt": "2024-01-19T16:45:00Z"
+      },
+      {
+        "id": "txn_005",
+        "type": "income",
+        "category": "Freelance",
+        "subcategory": "Services",
+        "amount": 450.00,
+        "currency": "USD",
+        "date": "2024-01-18",
+        "description": "Web Design Project",
+        "merchant": "Client XYZ",
+        "accountId": "acc_001",
+        "tags": ["freelance", "project"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-18T14:20:00Z",
+        "updatedAt": "2024-01-18T14:20:00Z"
+      },
+      {
+        "id": "txn_006",
+        "type": "expense",
+        "category": "Shopping",
+        "subcategory": "Online",
+        "amount": -89.99,
+        "currency": "USD",
+        "date": "2024-01-17",
+        "description": "Amazon Purchase",
+        "merchant": "Amazon",
+        "accountId": "acc_003",
+        "tags": ["shopping", "online"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-17T11:15:00Z",
+        "updatedAt": "2024-01-17T11:15:00Z"
+      },
+      {
+        "id": "txn_007",
+        "type": "expense",
+        "category": "Utilities",
+        "subcategory": "Electricity",
+        "amount": -120.00,
+        "currency": "USD",
+        "date": "2024-01-15",
+        "description": "Electric Bill",
+        "merchant": "Power Company",
+        "accountId": "acc_001",
+        "tags": ["utilities", "essential"],
+        "recurring": true,
+        "recurringId": "rec_002",
+        "status": "completed",
+        "createdAt": "2024-01-15T08:00:00Z",
+        "updatedAt": "2024-01-15T08:00:00Z"
+      },
+      {
+        "id": "txn_008",
+        "type": "income",
+        "category": "Investment",
+        "subcategory": "Dividends",
+        "amount": 75.50,
+        "currency": "USD",
+        "date": "2024-01-14",
+        "description": "Dividend Payment",
+        "merchant": "Investment Fund",
+        "accountId": "acc_002",
+        "tags": ["investment", "passive"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-14T12:00:00Z",
+        "updatedAt": "2024-01-14T12:00:00Z"
+      },
+      {
+        "id": "txn_009",
+        "type": "expense",
+        "category": "Entertainment",
+        "subcategory": "Movies",
+        "amount": -15.00,
+        "currency": "USD",
+        "date": "2024-01-13",
+        "description": "Movie Tickets",
+        "merchant": "AMC Theaters",
+        "accountId": "acc_001",
+        "tags": ["entertainment", "leisure"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-13T20:30:00Z",
+        "updatedAt": "2024-01-13T20:30:00Z"
+      },
+      {
+        "id": "txn_010",
+        "type": "expense",
+        "category": "Coffee",
+        "subcategory": "Beverages",
+        "amount": -4.50,
+        "currency": "USD",
+        "date": "2024-01-13",
+        "description": "Starbucks",
+        "merchant": "Starbucks",
+        "accountId": "acc_001",
+        "tags": ["coffee", "daily"],
+        "recurring": false,
+        "status": "completed",
+        "createdAt": "2024-01-13T08:15:00Z",
+        "updatedAt": "2024-01-13T08:15:00Z"
+      }
+    ],
+    "recurring": [
+      {
+        "id": "rec_001",
+        "type": "income",
+        "category": "Salary",
+        "subcategory": "Employment",
+        "amount": 3200.00,
+        "currency": "USD",
+        "frequency": "monthly",
+        "dayOfMonth": 20,
+        "description": "Monthly Salary",
+        "merchant": "Tech Corp Inc",
+        "accountId": "acc_001",
+        "startDate": "2024-01-20",
+        "endDate": null,
+        "isActive": true,
+        "status": "active",
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-20T09:00:00Z"
+      },
+      {
+        "id": "rec_002",
+        "type": "expense",
+        "category": "Utilities",
+        "subcategory": "Electricity",
+        "amount": -120.00,
+        "currency": "USD",
+        "frequency": "monthly",
+        "dayOfMonth": 15,
+        "description": "Electric Bill",
+        "merchant": "Power Company",
+        "accountId": "acc_001",
+        "startDate": "2024-01-15",
+        "endDate": null,
+        "isActive": true,
+        "status": "active",
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-15T08:00:00Z"
+      },
+      {
+        "id": "rec_003",
+        "type": "expense",
+        "category": "Subscription",
+        "subcategory": "Streaming",
+        "amount": -15.99,
+        "currency": "USD",
+        "frequency": "monthly",
+        "dayOfMonth": 1,
+        "description": "Netflix Subscription",
+        "merchant": "Netflix",
+        "accountId": "acc_003",
+        "startDate": "2024-01-01",
+        "endDate": null,
+        "isActive": true,
+        "status": "active",
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goals": {
+    "active": [
+      {
+        "id": "goal_001",
+        "name": "Emergency Fund",
+        "targetAmount": 15000,
+        "currentAmount": 8500,
+        "currency": "USD",
+        "targetDate": "2024-12-31",
+        "category": "Emergency",
+        "priority": "High",
+        "description": "Build a 6-month emergency fund for financial security",
+        "monthlyTarget": 1000,
+        "createdDate": "2024-01-15",
+        "status": "active",
+        "progress": 56.67,
+        "daysRemaining": 344,
+        "isOnTrack": true,
+        "accountId": "acc_002",
+        "createdAt": "2024-01-15T00:00:00Z",
+        "updatedAt": "2024-01-21T00:00:00Z"
+      },
+      {
+        "id": "goal_002",
+        "name": "New Car Down Payment",
+        "targetAmount": 25000,
+        "currentAmount": 12800,
+        "currency": "USD",
+        "targetDate": "2024-10-15",
+        "category": "Transportation",
+        "priority": "Medium",
+        "description": "Save for a reliable vehicle down payment",
+        "monthlyTarget": 1500,
+        "createdDate": "2024-02-01",
+        "status": "active",
+        "progress": 51.2,
+        "daysRemaining": 268,
+        "isOnTrack": true,
+        "accountId": "acc_002",
+        "createdAt": "2024-02-01T00:00:00Z",
+        "updatedAt": "2024-01-21T00:00:00Z"
+      },
+      {
+        "id": "goal_003",
+        "name": "Vacation to Japan",
+        "targetAmount": 8000,
+        "currentAmount": 3200,
+        "currency": "USD",
+        "targetDate": "2024-08-30",
+        "category": "Travel",
+        "priority": "Low",
+        "description": "Two-week vacation exploring Japan",
+        "monthlyTarget": 800,
+        "createdDate": "2024-03-10",
+        "status": "active",
+        "progress": 40,
+        "daysRemaining": 222,
+        "isOnTrack": false,
+        "accountId": "acc_002",
+        "createdAt": "2024-03-10T00:00:00Z",
+        "updatedAt": "2024-01-21T00:00:00Z"
+      }
+    ],
+    "completed": [
+      {
+        "id": "goal_004",
+        "name": "Emergency Fund",
+        "targetAmount": 10000,
+        "finalAmount": 10500,
+        "currency": "USD",
+        "completedDate": "2024-05-15",
+        "originalTargetDate": "2024-06-30",
+        "category": "Emergency",
+        "priority": "High",
+        "description": "Built a 6-month emergency fund for financial security",
+        "monthlyTarget": 1000,
+        "createdDate": "2024-01-15",
+        "completionTime": 120,
+        "earlyCompletion": true,
+        "achievement": "Early",
+        "status": "completed",
+        "accountId": "acc_002",
+        "createdAt": "2024-01-15T00:00:00Z",
+        "updatedAt": "2024-05-15T00:00:00Z"
+      },
+      {
+        "id": "goal_005",
+        "name": "Vacation to Europe",
+        "targetAmount": 8000,
+        "finalAmount": 8200,
+        "currency": "USD",
+        "completedDate": "2024-04-20",
+        "originalTargetDate": "2024-05-01",
+        "category": "Travel",
+        "priority": "Medium",
+        "description": "Two-week vacation exploring Europe",
+        "monthlyTarget": 800,
+        "createdDate": "2024-02-01",
+        "completionTime": 79,
+        "earlyCompletion": true,
+        "achievement": "Early",
+        "status": "completed",
+        "accountId": "acc_002",
+        "createdAt": "2024-02-01T00:00:00Z",
+        "updatedAt": "2024-04-20T00:00:00Z"
+      }
+    ],
+    "archived": [
+      {
+        "id": "goal_006",
+        "name": "Luxury Car Purchase",
+        "targetAmount": 75000,
+        "currentAmount": 25000,
+        "currency": "USD",
+        "targetDate": "2024-03-01",
+        "category": "Transportation",
+        "priority": "Medium",
+        "description": "Dream car purchase postponed due to market conditions",
+        "monthlyTarget": 3000,
+        "createdDate": "2023-01-01",
+        "archivedDate": "2024-02-15",
+        "archiveReason": "Postponed",
+        "progress": 33.33,
+        "daysOverdue": 45,
+        "status": "archived",
+        "accountId": "acc_002",
+        "createdAt": "2023-01-01T00:00:00Z",
+        "updatedAt": "2024-02-15T00:00:00Z"
+      },
+      {
+        "id": "goal_007",
+        "name": "Investment Property",
+        "targetAmount": 100000,
+        "currentAmount": 45000,
+        "currency": "USD",
+        "targetDate": "2024-12-31",
+        "category": "Investment",
+        "priority": "High",
+        "description": "Cancelled due to market volatility",
+        "monthlyTarget": 4000,
+        "createdDate": "2023-03-01",
+        "archivedDate": "2024-03-15",
+        "archiveReason": "Cancelled",
+        "progress": 45,
+        "daysOverdue": 15,
+        "status": "archived",
+        "accountId": "acc_002",
+        "createdAt": "2023-03-01T00:00:00Z",
+        "updatedAt": "2024-03-15T00:00:00Z"
+      }
+    ]
+  },
+  "analytics": {
+    "monthly": {
+      "income": 3650.00,
+      "expenses": 2840.49,
+      "savings": 809.51,
+      "savingsRate": 22.18
+    },
+    "categories": {
+      "expenses": [
+        { "category": "Groceries", "amount": 67.50, "percentage": 2.38 },
+        { "category": "Dining", "amount": 32.50, "percentage": 1.14 },
+        { "category": "Transportation", "amount": 45.00, "percentage": 1.58 },
+        { "category": "Shopping", "amount": 89.99, "percentage": 3.17 },
+        { "category": "Utilities", "amount": 120.00, "percentage": 4.22 },
+        { "category": "Entertainment", "amount": 15.00, "percentage": 0.53 },
+        { "category": "Coffee", "amount": 4.50, "percentage": 0.16 }
+      ],
+      "income": [
+        { "category": "Salary", "amount": 3200.00, "percentage": 87.67 },
+        { "category": "Freelance", "amount": 450.00, "percentage": 12.33 }
+      ]
+    },
+    "trends": {
+      "income": [
+        { "month": "2024-01", "amount": 3650.00 },
+        { "month": "2023-12", "amount": 3500.00 },
+        { "month": "2023-11", "amount": 3400.00 }
+      ],
+      "expenses": [
+        { "month": "2024-01", "amount": 2840.49 },
+        { "month": "2023-12", "amount": 2700.00 },
+        { "month": "2023-11", "amount": 2600.00 }
+      ]
+    }
+  },
+  "notifications": [
+    {
+      "id": "notif_001",
+      "type": "goal",
+      "title": "Goal Milestone Reached",
+      "message": "You've reached 50% of your Emergency Fund goal!",
+      "read": false,
+      "createdAt": "2024-01-21T10:00:00Z"
+    },
+    {
+      "id": "notif_002",
+      "type": "transaction",
+      "title": "Large Transaction",
+      "message": "Unusual spending detected: $89.99 at Amazon",
+      "read": false,
+      "createdAt": "2024-01-17T11:15:00Z"
+    },
+    {
+      "id": "notif_003",
+      "type": "system",
+      "title": "Account Connected",
+      "message": "Your Chase Bank account has been successfully connected",
+      "read": true,
+      "createdAt": "2024-01-15T09:30:00Z"
+    }
+  ],
+  "recentActivity": [
+    {
+      "id": "act_001",
+      "type": "transaction",
+      "title": "Grocery Shopping",
+      "amount": -67.50,
+      "icon": "🛒",
+      "time": "2m ago",
+      "transactionId": "txn_001"
+    },
+    {
+      "id": "act_002",
+      "type": "transaction",
+      "title": "Salary Deposit",
+      "amount": 3200.00,
+      "icon": "💰",
+      "time": "1h ago",
+      "transactionId": "txn_002"
+    },
+    {
+      "id": "act_003",
+      "type": "transaction",
+      "title": "Coffee Shop",
+      "amount": -4.50,
+      "icon": "☕",
+      "time": "3h ago",
+      "transactionId": "txn_010"
+    }
+  ]
+} 
