@@ -48,6 +48,16 @@
         "bank": "Chase Bank",
         "creditLimit": 10000,
         "isActive": true
+      },
+      {
+        "id": "acc_004",
+        "name": "Brokerage Account",
+        "type": "investment",
+        "balance": 15000.00,
+        "currency": "USD",
+        "accountNumber": "****4321",
+        "bank": "Vanguard",
+        "isActive": true
       }
     ]
   },
