@@ -2,6 +2,7 @@
 import React, { useState, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, Target, TrendingUp, Calendar, Eye, EyeOff, X, Save, Zap, Award, Clock, CheckCircle2, Archive, RotateCcw, Star, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Enhanced shadcn-style components
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -125,7 +126,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => 
 };
 
 interface ArchivedGoal {
-  id: number;
+  id: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
@@ -139,82 +140,45 @@ interface ArchivedGoal {
   archiveReason: 'Cancelled' | 'Postponed' | 'Changed' | 'Achieved' | 'Other';
   progress: number;
   daysOverdue: number;
+  [key: string]: any;
 }
 
-const ArchivedGoalsPage = () => {
-  const [archivedData, setArchivedData] = useState<ArchivedGoal[]>([
-    {
-      id: 1,
-      name: 'Luxury Car Purchase',
-      targetAmount: 75000,
-      currentAmount: 25000,
-      targetDate: '2024-03-01',
-      category: 'Transportation',
-      priority: 'Medium',
-      description: 'Dream car purchase postponed due to market conditions',
-      monthlyTarget: 3000,
-      createdDate: '2023-01-01',
-      archivedDate: '2024-02-15',
-      archiveReason: 'Postponed',
-      progress: 33,
-      daysOverdue: 45
-    },
-    {
-      id: 2,
-      name: 'World Tour',
-      targetAmount: 25000,
-      currentAmount: 8000,
-      targetDate: '2024-06-01',
-      category: 'Travel',
-      priority: 'Low',
-      description: 'Postponed due to work commitments',
-      monthlyTarget: 1500,
-      createdDate: '2023-06-01',
-      archivedDate: '2024-01-20',
-      archiveReason: 'Postponed',
-      progress: 32,
-      daysOverdue: 30
-    },
-    {
-      id: 3,
-      name: 'Investment Property',
-      targetAmount: 100000,
-      currentAmount: 45000,
-      targetDate: '2024-12-31',
-      category: 'Investment',
-      priority: 'High',
-      description: 'Cancelled due to market volatility',
-      monthlyTarget: 4000,
-      createdDate: '2023-03-01',
-      archivedDate: '2024-03-15',
-      archiveReason: 'Cancelled',
-      progress: 45,
-      daysOverdue: 15
-    },
-    {
-      id: 4,
-      name: 'Home Theater Setup',
-      targetAmount: 15000,
-      currentAmount: 15000,
-      targetDate: '2024-01-15',
-      category: 'Home',
-      priority: 'Low',
-      description: 'Completed but archived for record keeping',
-      monthlyTarget: 1000,
-      createdDate: '2023-01-15',
-      archivedDate: '2024-01-15',
-      archiveReason: 'Achieved',
-      progress: 100,
-      daysOverdue: 0
-    }
-  ]);
+const defaultForm: Omit<ArchivedGoal, 'id' | 'progress' | 'daysOverdue'> = {
+  name: '',
+  targetAmount: 0,
+  currentAmount: 0,
+  targetDate: '',
+  category: '',
+  priority: 'Medium',
+  description: '',
+  monthlyTarget: 0,
+  createdDate: '',
+  archivedDate: '',
+  archiveReason: 'Other',
+};
 
+const ArchivedGoalsPage = () => {
+  const { data, loading, error } = useFinancialData();
+  const [archivedData, setArchivedData] = useState<ArchivedGoal[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [reasonFilter, setReasonFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ArchivedGoal | null>(null);
+  const [formData, setFormData] = useState(defaultForm);
   const [showAmounts, setShowAmounts] = useState(true);
+
+  // Load initial data from JSON
+  React.useEffect(() => {
+    if (data && data.goals && data.goals.archived) {
+      setArchivedData(data.goals.archived.map((g: any) => ({
+        ...g,
+        id: g.id || Math.random().toString(36).slice(2),
+        progress: g.progress || Math.round((g.currentAmount / g.targetAmount) * 100),
+        daysOverdue: g.daysOverdue || 0,
+      })));
+    }
+  }, [data]);
 
   // Calculate statistics
   const totalTargetAmount = archivedData.reduce((sum, goal) => sum + goal.targetAmount, 0);
@@ -249,25 +213,53 @@ const ArchivedGoalsPage = () => {
     return matchesSearch && matchesCategory && matchesReason;
   });
 
+  // CRUD Handlers
   const handleAdd = () => {
-    console.log('Add Archived Goal clicked');
+    setEditingItem(null);
+    setFormData({ ...defaultForm, createdDate: new Date().toISOString().slice(0, 10), archivedDate: new Date().toISOString().slice(0, 10) });
     setIsModalOpen(true);
   };
 
   const handleEdit = (goal: ArchivedGoal) => {
-    console.log('Edit Archived Goal clicked for:', goal.id);
     setEditingItem(goal);
+    setFormData({ ...goal });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    console.log('Delete Archived Goal clicked for:', id);
+  const handleDelete = (id: string) => {
     setArchivedData(prev => prev.filter(goal => goal.id !== id));
   };
 
   const handleRestore = (goal: ArchivedGoal) => {
-    console.log('Restore Goal clicked for:', goal.id);
-    // Convert archived goal back to active goal
+    // Optionally implement restore to active
+  };
+
+  const handleFormChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData.name || !formData.targetAmount || !formData.targetDate) return;
+    if (editingItem) {
+      setArchivedData(prev => prev.map(goal => goal.id === editingItem.id ? {
+        ...goal,
+        ...formData,
+        progress: Math.round((formData.currentAmount / formData.targetAmount) * 100),
+        daysOverdue: goal.daysOverdue || 0,
+      } : goal));
+    } else {
+      setArchivedData(prev => [
+        {
+          ...formData,
+          id: Math.random().toString(36).slice(2),
+          progress: Math.round((formData.currentAmount / formData.targetAmount) * 100),
+          daysOverdue: 0,
+        } as ArchivedGoal,
+        ...prev
+      ]);
+    }
+    setIsModalOpen(false);
   };
 
   const getReasonColor = (reason: string) => {
@@ -591,12 +583,70 @@ const ArchivedGoalsPage = () => {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
-            <div className="text-center py-8">
-              <Archive className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Archive Goal Form</h3>
-              <p className="text-slate-600">Form implementation would go here</p>
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Name *</label>
+                <Input value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('name', e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Amount *</label>
+                  <Input type="number" value={formData.targetAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', Number(e.target.value))} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Current Amount *</label>
+                  <Input type="number" value={formData.currentAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('currentAmount', Number(e.target.value))} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Date *</label>
+                  <Input type="date" value={formData.targetDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetDate', e.target.value)} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Archived Date *</label>
+                  <Input type="date" value={formData.archivedDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('archivedDate', e.target.value)} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Category *</label>
+                  <Input value={formData.category} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('category', e.target.value)} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Priority *</label>
+                  <Select value={formData.priority} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value)}>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Monthly Target</label>
+                  <Input type="number" value={formData.monthlyTarget} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Archive Reason *</label>
+                  <Select value={formData.archiveReason} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('archiveReason', e.target.value)}>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Postponed">Postponed</option>
+                    <option value="Changed">Changed</option>
+                    <option value="Achieved">Achieved</option>
+                    <option value="Other">Other</option>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">Cancel</Button>
+                <Button variant="success" type="submit">{editingItem ? 'Save Changes' : 'Add Goal'}</Button>
+              </div>
+            </form>
           </div>
         </Modal>
       </div>

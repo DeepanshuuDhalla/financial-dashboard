@@ -4,7 +4,7 @@ import {
   Eye, EyeOff, MoreHorizontal, Filter, Search, 
   Zap, Target, Brain, Activity, ChevronLeft, ChevronRight,
   DollarSign, PieChart, BarChart3, Calendar, Download,
-  Settings, Bell, Plus, Minus, Star, AlertCircle
+  Settings, Bell, Plus, Minus, Star, AlertCircle, X
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, ResponsiveContainer, 
@@ -104,8 +104,35 @@ const FinancialDashboard = () => {
   const [selectedMetric, setSelectedMetric] = useState('netWorth');
   const [selectedPeriod, setSelectedPeriod] = useState('6m');
   const [activeInsight, setActiveInsight] = useState(0);
-  
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
+  const [transactionForm, setTransactionForm] = useState({
+    description: '',
+    amount: 0,
+    category: 'Food',
+    subcategory: '',
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+    account: '',
+    merchant: '',
+    type: 'debit',
+    recurring: false
+  });
+
+  // Enhanced transactions with better categorization
+  const transactions = [
+    { id: 1, description: 'Salary Deposit - Tech Corp', amount: 4800.00, category: 'Income', date: '2024-06-20', recurring: true, impact: 'positive', icon: DollarSign },
+    { id: 2, description: 'Rent Payment - Downtown Apt', amount: -1200.00, category: 'Housing', date: '2024-06-19', recurring: true, impact: 'neutral', icon: null },
+    { id: 3, description: 'S&P 500 ETF Purchase', amount: -800.00, category: 'Investment', date: '2024-06-18', recurring: false, impact: 'positive', icon: TrendingUp },
+    { id: 4, description: 'Whole Foods Market', amount: -127.85, category: 'Food', date: '2024-06-17', recurring: false, impact: 'neutral', icon: null },
+    { id: 5, description: 'Electric Bill - June', amount: -89.42, category: 'Utilities', date: '2024-06-16', recurring: true, impact: 'neutral', icon: null },
+    { id: 6, description: 'Coffee Shop & Restaurants', amount: -64.30, category: 'Food', date: '2024-06-15', recurring: false, impact: 'warning', icon: null },
+    { id: 7, description: 'Freelance Web Design', amount: 1200.00, category: 'Income', date: '2024-06-14', recurring: false, impact: 'positive', icon: DollarSign },
+    { id: 8, description: 'Gas Station - Shell', amount: -52.15, category: 'Transportation', date: '2024-06-13', recurring: false, impact: 'neutral', icon: null },
+    { id: 9, description: 'Netflix Subscription', amount: -15.99, category: 'Entertainment', date: '2024-06-12', recurring: true, impact: 'neutral', icon: null },
+    { id: 10, description: 'Gym Membership', amount: -49.99, category: 'Health', date: '2024-06-11', recurring: true, impact: 'positive', icon: Activity }
+  ];
   const itemsPerPage = 6;
+  const [dashboardTransactions, setDashboardTransactions] = useState<typeof transactions>(transactions);
 
   // Enhanced financial data with more realistic numbers
   const baseData = {
@@ -180,20 +207,6 @@ const FinancialDashboard = () => {
     }));
   }, [baseData.monthlyData]);
 
-  // Enhanced transactions with better categorization
-  const transactions = [
-    { id: 1, description: 'Salary Deposit - Tech Corp', amount: 4800.00, category: 'Income', date: '2024-06-20', recurring: true, impact: 'positive', icon: DollarSign },
-    { id: 2, description: 'Rent Payment - Downtown Apt', amount: -1200.00, category: 'Housing', date: '2024-06-19', recurring: true, impact: 'neutral', icon: null },
-    { id: 3, description: 'S&P 500 ETF Purchase', amount: -800.00, category: 'Investment', date: '2024-06-18', recurring: false, impact: 'positive', icon: TrendingUp },
-    { id: 4, description: 'Whole Foods Market', amount: -127.85, category: 'Food', date: '2024-06-17', recurring: false, impact: 'neutral', icon: null },
-    { id: 5, description: 'Electric Bill - June', amount: -89.42, category: 'Utilities', date: '2024-06-16', recurring: true, impact: 'neutral', icon: null },
-    { id: 6, description: 'Coffee Shop & Restaurants', amount: -64.30, category: 'Food', date: '2024-06-15', recurring: false, impact: 'warning', icon: null },
-    { id: 7, description: 'Freelance Web Design', amount: 1200.00, category: 'Income', date: '2024-06-14', recurring: false, impact: 'positive', icon: DollarSign },
-    { id: 8, description: 'Gas Station - Shell', amount: -52.15, category: 'Transportation', date: '2024-06-13', recurring: false, impact: 'neutral', icon: null },
-    { id: 9, description: 'Netflix Subscription', amount: -15.99, category: 'Entertainment', date: '2024-06-12', recurring: true, impact: 'neutral', icon: null },
-    { id: 10, description: 'Gym Membership', amount: -49.99, category: 'Health', date: '2024-06-11', recurring: true, impact: 'positive', icon: Activity }
-  ];
-
   // Smart insights
   const insights = [
     {
@@ -220,7 +233,7 @@ const FinancialDashboard = () => {
   ];
 
   // Filtered and paginated transactions
-  const filteredTransactions = transactions.filter(t => 
+  const filteredTransactions = dashboardTransactions.filter(t => 
     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -246,7 +259,67 @@ const FinancialDashboard = () => {
     { key: '2y', label: '2Y' }
   ];
 
+  const categories = ['Food', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Health', 'Investment', 'Other'];
+  const subcategories: Record<string, string[]> = {
+    Food: ['Groceries', 'Dining Out', 'Coffee'],
+    Housing: ['Rent', 'Mortgage', 'Maintenance'],
+    Transportation: ['Fuel', 'Public Transit', 'Taxi'],
+    Utilities: ['Electricity', 'Water', 'Internet'],
+    Entertainment: ['Movies', 'Streaming', 'Events'],
+    Health: ['Pharmacy', 'Doctor', 'Gym'],
+    Investment: ['Stocks', 'Crypto', 'Bonds'],
+    Other: ['Miscellaneous']
+  };
+  const accounts = ['Checking', 'Savings', 'Credit Card'];
+
+  const openAddTransaction = () => {
+    setTransactionForm({
+      description: '',
+      amount: 0,
+      category: 'Food',
+      subcategory: subcategories['Food'][0],
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+      account: accounts[0],
+      merchant: '',
+      type: 'debit',
+      recurring: false
+    });
+    setIsAddTransactionOpen(true);
+  };
+  const closeAddTransaction = () => setIsAddTransactionOpen(false);
+  const handleTransactionFormChange = (field: string, value: any) => {
+    setTransactionForm(prev => ({ ...prev, [field]: value }));
+  };
+  const handleAddTransactionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDashboardTransactions((prev: typeof transactions) => [
+      {
+        id: Math.max(0, ...prev.map((t: typeof transactions[0]) => t.id)) + 1,
+        description: transactionForm.description,
+        amount: transactionForm.type === 'debit' ? -Math.abs(transactionForm.amount) : Math.abs(transactionForm.amount),
+        category: transactionForm.category,
+        subcategory: transactionForm.subcategory,
+        date: transactionForm.date,
+        time: transactionForm.time,
+        status: 'completed',
+        recurring: transactionForm.recurring,
+        account: transactionForm.account,
+        merchant: transactionForm.merchant,
+        type: transactionForm.type,
+        icon: null,
+        impact: 'neutral',
+      },
+      ...prev
+    ]);
+    setIsAddTransactionOpen(false);
+  };
+
   const handleQuickAction = (action: string) => {
+    if (action === 'add-transaction') {
+      openAddTransaction();
+      return;
+    }
     console.log(`Executing action: ${action}`);
     // Here you would implement actual functionality
   };
@@ -727,6 +800,148 @@ const FinancialDashboard = () => {
           </p>
         </div>
       </div>
+      {isAddTransactionOpen && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200/50">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Add New Transaction</h2>
+              <Button variant="ghost" size="icon" onClick={closeAddTransaction} className="hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <form onSubmit={handleAddTransactionSubmit} className="p-6 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <input
+                    type="text"
+                    value={transactionForm.description}
+                    onChange={e => handleTransactionFormChange('description', e.target.value)}
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter transaction description"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={transactionForm.amount}
+                      onChange={e => handleTransactionFormChange('amount', parseFloat(e.target.value) || 0)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      value={transactionForm.type}
+                      onChange={e => handleTransactionFormChange('type', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="debit">Expense (Debit)</option>
+                      <option value="credit">Income (Credit)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                    <select
+                      value={transactionForm.category}
+                      onChange={e => {
+                        handleTransactionFormChange('category', e.target.value);
+                        handleTransactionFormChange('subcategory', subcategories[e.target.value]?.[0] || '');
+                      }}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
+                    <select
+                      value={transactionForm.subcategory}
+                      onChange={e => handleTransactionFormChange('subcategory', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {(subcategories[transactionForm.category] || []).map(subcategory => (
+                        <option key={subcategory} value={subcategory}>{subcategory}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                    <input
+                      type="date"
+                      value={transactionForm.date}
+                      onChange={e => handleTransactionFormChange('date', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={transactionForm.time}
+                      onChange={e => handleTransactionFormChange('time', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Account *</label>
+                    <select
+                      value={transactionForm.account}
+                      onChange={e => handleTransactionFormChange('account', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {accounts.map(account => (
+                        <option key={account} value={account}>{account}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Merchant</label>
+                    <input
+                      type="text"
+                      value={transactionForm.merchant}
+                      onChange={e => handleTransactionFormChange('merchant', e.target.value)}
+                      className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter merchant name"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="recurring"
+                    checked={transactionForm.recurring}
+                    onChange={e => handleTransactionFormChange('recurring', e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="recurring" className="text-sm text-gray-700 cursor-pointer">
+                    This is a recurring transaction
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="outline" onClick={closeAddTransaction} type="button">Cancel</Button>
+                <Button variant="success" type="submit">Add Transaction</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

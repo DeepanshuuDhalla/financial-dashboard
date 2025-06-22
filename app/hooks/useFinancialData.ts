@@ -7,6 +7,7 @@ export interface FinancialData {
   analytics: any;
   notifications: any;
   recentActivity: any;
+  accounts?: any[];
 }
 
 export function useFinancialData() {
@@ -33,5 +34,5 @@ export function useFinancialData() {
     load();
   }, []);
 
-  return { data, loading, error, reload: load };
+  return { data: data ? { ...data, accounts: data.accounts || data.user.accounts } : null, loading, error, reload: load };
 } 
