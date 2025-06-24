@@ -2,6 +2,7 @@
 import React, { useState, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, Target, TrendingUp, Calendar, Eye, EyeOff, X, Save, Zap, Award, Clock, CheckCircle2, RotateCcw, Star } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Enhanced shadcn-style components
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -125,7 +126,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => 
 };
 
 interface CompletedGoal {
-  id: number;
+  id: string;
   name: string;
   targetAmount: number;
   finalAmount: number;
@@ -139,50 +140,45 @@ interface CompletedGoal {
   completionTime: number;
   earlyCompletion: boolean;
   achievement: 'Early' | 'On Time' | 'Late';
+  [key: string]: any;
 }
 
-const CompletedGoalsPage = () => {
-  const [completedData, setCompletedData] = useState<CompletedGoal[]>([
-    {
-      id: 1,
-      name: 'Emergency Fund',
-      targetAmount: 10000,
-      finalAmount: 10500,
-      completedDate: '2024-05-15',
-      originalTargetDate: '2024-06-30',
-      category: 'Emergency',
-      priority: 'High',
-      description: 'Built a 6-month emergency fund for financial security',
-      monthlyTarget: 1000,
-      createdDate: '2024-01-15',
-      completionTime: 120,
-      earlyCompletion: true,
-      achievement: 'Early'
-    },
-    {
-      id: 2,
-      name: 'Vacation to Europe',
-      targetAmount: 8000,
-      finalAmount: 8200,
-      completedDate: '2024-04-20',
-      originalTargetDate: '2024-05-01',
-      category: 'Travel',
-      priority: 'Medium',
-      description: 'Two-week vacation exploring Europe',
-      monthlyTarget: 800,
-      createdDate: '2024-02-01',
-      completionTime: 79,
-      earlyCompletion: true,
-      achievement: 'Early'
-    }
-  ]);
+const defaultForm: Omit<CompletedGoal, 'id' | 'completionTime'> = {
+  name: '',
+  targetAmount: 0,
+  finalAmount: 0,
+  completedDate: '',
+  originalTargetDate: '',
+  category: '',
+  priority: 'Medium',
+  description: '',
+  monthlyTarget: 0,
+  createdDate: '',
+  earlyCompletion: false,
+  achievement: 'On Time',
+};
 
+const CompletedGoalsPage = () => {
+  const { data, loading, error } = useFinancialData();
+  const [completedData, setCompletedData] = useState<CompletedGoal[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [achievementFilter, setAchievementFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CompletedGoal | null>(null);
+  const [formData, setFormData] = useState(defaultForm);
   const [showAmounts, setShowAmounts] = useState(true);
+
+  // Load initial data from JSON
+  React.useEffect(() => {
+    if (data && data.goals && data.goals.completed) {
+      setCompletedData(data.goals.completed.map((g: any) => ({
+        ...g,
+        id: g.id || Math.random().toString(36).slice(2),
+        completionTime: g.completionTime || 0,
+      })));
+    }
+  }, [data]);
 
   // Calculate statistics
   const totalFinalAmount = completedData.reduce((sum, goal) => sum + goal.finalAmount, 0);
@@ -200,25 +196,55 @@ const CompletedGoalsPage = () => {
     return matchesSearch && matchesCategory && matchesAchievement;
   });
 
+  // CRUD Handlers
   const handleAdd = () => {
-    console.log('Add Completed Goal clicked');
+    setEditingItem(null);
+    setFormData({ ...defaultForm, createdDate: new Date().toISOString().slice(0, 10), completedDate: new Date().toISOString().slice(0, 10), originalTargetDate: new Date().toISOString().slice(0, 10) });
     setIsModalOpen(true);
   };
 
   const handleEdit = (goal: CompletedGoal) => {
-    console.log('Edit Completed Goal clicked for:', goal.id);
     setEditingItem(goal);
+    setFormData({ ...goal });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    console.log('Delete Completed Goal clicked for:', id);
+  const handleDelete = (id: string) => {
     setCompletedData(prev => prev.filter(goal => goal.id !== id));
   };
 
   const handleReactivate = (goal: CompletedGoal) => {
-    console.log('Reactivate Goal clicked for:', goal.id);
-    // Convert completed goal back to active goal
+    // Optionally implement reactivate to active
+  };
+
+  const handleFormChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData.name || !formData.targetAmount || !formData.completedDate) return;
+    // Calculate completionTime (days between createdDate and completedDate)
+    const created = new Date(formData.createdDate);
+    const completed = new Date(formData.completedDate);
+    const completionTime = Math.ceil((completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    if (editingItem) {
+      setCompletedData(prev => prev.map(goal => goal.id === editingItem.id ? {
+        ...goal,
+        ...formData,
+        completionTime,
+      } : goal));
+    } else {
+      setCompletedData(prev => [
+        {
+          ...formData,
+          id: Math.random().toString(36).slice(2),
+          completionTime,
+        } as CompletedGoal,
+        ...prev
+      ]);
+    }
+    setIsModalOpen(false);
   };
 
   const getAchievementColor = (achievement: string) => {
@@ -461,12 +487,74 @@ const CompletedGoalsPage = () => {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Goal Completion Form</h3>
-              <p className="text-slate-600">Form implementation would go here</p>
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Name *</label>
+                <Input value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('name', e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Amount *</label>
+                  <Input type="number" value={formData.targetAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', Number(e.target.value))} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Final Amount *</label>
+                  <Input type="number" value={formData.finalAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('finalAmount', Number(e.target.value))} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Completed Date *</label>
+                  <Input type="date" value={formData.completedDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('completedDate', e.target.value)} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Original Target Date *</label>
+                  <Input type="date" value={formData.originalTargetDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('originalTargetDate', e.target.value)} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Category *</label>
+                  <Input value={formData.category} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('category', e.target.value)} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Priority *</label>
+                  <Select value={formData.priority} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value)}>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Monthly Target</label>
+                  <Input type="number" value={formData.monthlyTarget} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Achievement *</label>
+                  <Select value={formData.achievement} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('achievement', e.target.value)}>
+                    <option value="Early">Early</option>
+                    <option value="On Time">On Time</option>
+                    <option value="Late">Late</option>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={formData.earlyCompletion} onChange={e => handleFormChange('earlyCompletion', e.target.checked)} id="earlyCompletion" />
+                  <label htmlFor="earlyCompletion" className="text-sm font-medium text-slate-700">Early Completion</label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                  <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">Cancel</Button>
+                <Button variant="success" type="submit">{editingItem ? 'Save Changes' : 'Add Goal'}</Button>
+              </div>
+            </form>
           </div>
         </Modal>
       </div>
