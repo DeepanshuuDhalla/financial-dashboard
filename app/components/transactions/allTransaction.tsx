@@ -7,6 +7,9 @@ import {
   ArrowUp, ArrowDown, MoreHorizontal, Star, Clock, X, Copy, Save
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
+import FullscreenModal from "../common/FullscreenModal";
+import { MOCK_TRANSACTIONS } from '../../lib/mockData';
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Type definitions
 interface Transaction {
@@ -141,6 +144,7 @@ const sortableFields = ['date', 'amount', 'description', 'category'] as const;
 type SortField = typeof sortableFields[number];
 
 const AllTransactionsPage = () => {
+  const { data, usingMockData, showMockWarning, onRealDataAdded } = useFinancialData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
@@ -149,30 +153,14 @@ const AllTransactionsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [selectedTransactions, setSelectedTransactions] = useState(new Set());
+  const [selectedTransactions, setSelectedTransactions] = useState(new Set<number>());
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: 1, description: 'Salary Deposit - Tech Corp', amount: 4800.00, category: 'Income', subcategory: 'Salary', date: '2024-06-20', time: '09:15 AM', status: 'completed', recurring: true, account: 'Checking', merchant: 'Tech Corp', type: 'credit' },
-    { id: 2, description: 'Rent Payment - Downtown Apt', amount: -1200.00, category: 'Housing', subcategory: 'Rent', date: '2024-06-19', time: '08:00 AM', status: 'completed', recurring: true, account: 'Checking', merchant: 'Property Manager', type: 'debit' },
-    { id: 3, description: 'S&P 500 ETF Purchase', amount: -800.00, category: 'Investment', subcategory: 'Stocks', date: '2024-06-18', time: '02:30 PM', status: 'completed', recurring: false, account: 'Investment', merchant: 'Vanguard', type: 'debit' },
-    { id: 4, description: 'Whole Foods Market', amount: -127.85, category: 'Food', subcategory: 'Groceries', date: '2024-06-17', time: '06:45 PM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'Whole Foods', type: 'debit' },
-    { id: 5, description: 'Electric Bill - June', amount: -89.42, category: 'Utilities', subcategory: 'Electricity', date: '2024-06-16', time: '10:00 AM', status: 'completed', recurring: true, account: 'Checking', merchant: 'Electric Company', type: 'debit' },
-    { id: 6, description: 'Coffee Shop & Restaurants', amount: -64.30, category: 'Food', subcategory: 'Dining Out', date: '2024-06-15', time: '12:30 PM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'Local Cafe', type: 'debit' },
-    { id: 7, description: 'Freelance Web Design', amount: 1200.00, category: 'Income', subcategory: 'Freelance', date: '2024-06-14', time: '04:20 PM', status: 'completed', recurring: false, account: 'Checking', merchant: 'Client XYZ', type: 'credit' },
-    { id: 8, description: 'Gas Station - Shell', amount: -52.15, category: 'Transportation', subcategory: 'Fuel', date: '2024-06-13', time: '07:15 AM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'Shell', type: 'debit' },
-    { id: 9, description: 'Netflix Subscription', amount: -15.99, category: 'Entertainment', subcategory: 'Streaming', date: '2024-06-12', time: '11:00 PM', status: 'completed', recurring: true, account: 'Credit Card', merchant: 'Netflix', type: 'debit' },
-    { id: 10, description: 'Gym Membership', amount: -49.99, category: 'Health', subcategory: 'Fitness', date: '2024-06-11', time: '06:00 AM', status: 'completed', recurring: true, account: 'Checking', merchant: 'Local Gym', type: 'debit' },
-    { id: 11, description: 'Amazon Purchase', amount: -156.78, category: 'Shopping', subcategory: 'Online', date: '2024-06-10', time: '03:45 PM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'Amazon', type: 'debit' },
-    { id: 12, description: 'Uber Ride', amount: -23.50, category: 'Transportation', subcategory: 'Rideshare', date: '2024-06-09', time: '09:30 PM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'Uber', type: 'debit' },
-    { id: 13, description: 'Dividend Payment - AAPL', amount: 45.67, category: 'Investment', subcategory: 'Dividends', date: '2024-06-08', time: '12:00 PM', status: 'completed', recurring: true, account: 'Investment', merchant: 'Apple Inc', type: 'credit' },
-    { id: 14, description: 'Pharmacy - CVS', amount: -34.21, category: 'Health', subcategory: 'Pharmacy', date: '2024-06-07', time: '02:15 PM', status: 'completed', recurring: false, account: 'Credit Card', merchant: 'CVS', type: 'debit' },
-    { id: 15, description: 'Internet Bill', amount: -79.99, category: 'Utilities', subcategory: 'Internet', date: '2024-06-06', time: '08:30 AM', status: 'completed', recurring: true, account: 'Checking', merchant: 'ISP Provider', type: 'debit' }
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const itemsPerPage = 15;
 
@@ -276,67 +264,6 @@ const AllTransactionsPage = () => {
     });
   }, [transactions]);
 
-  // Add some sample data for the current week to make chart visible
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    // Add sample transactions for current dates if they don't exist
-    const hasCurrentData = transactions.some(t => 
-      t.date === today || t.date === yesterday || t.date === twoDaysAgo
-    );
-    
-    if (!hasCurrentData) {
-      const sampleTransactions: Transaction[] = [
-        {
-          id: Math.max(...transactions.map(t => t.id)) + 1,
-          description: 'Coffee Shop',
-          amount: -5.50,
-          category: 'Food',
-          subcategory: 'Coffee',
-          date: today,
-          time: '08:30',
-          status: 'completed',
-          recurring: false,
-          account: 'Credit Card',
-          merchant: 'Starbucks',
-          type: 'debit'
-        },
-        {
-          id: Math.max(...transactions.map(t => t.id)) + 2,
-          description: 'Lunch',
-          amount: -15.75,
-          category: 'Food',
-          subcategory: 'Dining Out',
-          date: yesterday,
-          time: '12:15',
-          status: 'completed',
-          recurring: false,
-          account: 'Credit Card',
-          merchant: 'Local Restaurant',
-          type: 'debit'
-        },
-        {
-          id: Math.max(...transactions.map(t => t.id)) + 3,
-          description: 'Freelance Payment',
-          amount: 500.00,
-          category: 'Income',
-          subcategory: 'Freelance',
-          date: twoDaysAgo,
-          time: '14:00',
-          status: 'completed',
-          recurring: false,
-          account: 'Checking',
-          merchant: 'Client ABC',
-          type: 'credit'
-        }
-      ];
-      
-      setTransactions(prev => [...sampleTransactions, ...prev]);
-    }
-  }, [transactions]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -418,34 +345,6 @@ const AllTransactionsPage = () => {
     recurring: false
   });
 
-  // Modal Component (moved inside to access isEditMode)
-  const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200/50">
-          <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200/50 rounded-t-2xl">
-            <div className="flex justify-between items-center p-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {isEditMode ? 'Edit Transaction' : 'Add New Transaction'}
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  {isEditMode ? 'Update transaction details' : 'Enter transaction information'}
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-gray-100">
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   // Modal handlers
   const openAddModal = () => {
     console.log('Add modal opened');
@@ -518,11 +417,34 @@ const AllTransactionsPage = () => {
     }
 
     closeModal();
+    onRealDataAdded();
   };
 
   const handleFormChange = (field: keyof TransactionFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Initialize transactions from data.transactions or MOCK_TRANSACTIONS
+  useEffect(() => {
+    if (data && Array.isArray(data.transactions)) {
+      setTransactions(data.transactions as Transaction[]);
+    } else {
+      setTransactions((MOCK_TRANSACTIONS as any[]).map((txn, i) => ({
+        id: typeof txn.id === 'string' || typeof txn.id === 'number' ? txn.id : i + 1,
+        description: txn.description ?? '',
+        amount: typeof txn.amount === 'number' ? txn.amount : 0,
+        category: txn.category ?? '',
+        subcategory: txn.subcategory ?? '',
+        date: txn.date ?? '',
+        time: txn.time ?? '12:00',
+        status: txn.status ?? 'completed',
+        recurring: txn.recurring ?? false,
+        account: txn.account ?? txn.account_id ?? '',
+        merchant: txn.merchant ?? '',
+        type: txn.type ?? '',
+      })));
+    }
+  }, [data]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-2 sm:p-4">
@@ -557,6 +479,12 @@ const AllTransactionsPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
+          </div>
+        )}
 
         {/* Analytics Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -1112,157 +1040,65 @@ const AllTransactionsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Add Transaction Modal */}
-        <Modal 
-          isOpen={isModalOpen} 
-          onClose={closeModal} 
-        >
-          <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
-            <div className="space-y-4">
+        {/* Add/Edit Transaction Modal */}
+        <FullscreenModal isOpen={isModalOpen} onClose={closeModal}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{isEditMode ? 'Edit' : 'Add'} Transaction</h2>
+          <form onSubmit={handleFormSubmit} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => handleFormChange('description', e.target.value)}
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter transaction description"
-                  required
-                />
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description</label>
+                <input type="text" value={formData.description} onChange={e => handleFormChange('description', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" required />
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => handleFormChange('amount', parseFloat(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => handleFormChange('type', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="debit">Expense (Debit)</option>
-                    <option value="credit">Income (Credit)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Amount</label>
+                <input type="number" value={formData.amount} onChange={e => handleFormChange('amount', Number(e.target.value))} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" required />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => {
-                      handleFormChange('category', e.target.value);
-                      handleFormChange('subcategory', subcategories[e.target.value as keyof typeof subcategories]?.[0] || '');
-                    }}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {categories.filter(c => c !== 'all').map(category => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
-                  <select
-                    value={formData.subcategory}
-                    onChange={(e) => handleFormChange('subcategory', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {subcategories[formData.category as keyof typeof subcategories]?.map(subcategory => (
-                      <option key={subcategory} value={subcategory}>{subcategory}</option>
-                    )) || []}
-                  </select>
-                </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <select value={formData.category} onChange={e => handleFormChange('category', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90">
+                  {categories.filter(c => c !== 'all').map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleFormChange('date', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                  <input
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => handleFormChange('time', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Subcategory</label>
+                <input type="text" value={formData.subcategory} onChange={e => handleFormChange('subcategory', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Account *</label>
-                  <select
-                    value={formData.account}
-                    onChange={(e) => handleFormChange('account', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {accounts.map(account => (
-                      <option key={account} value={account}>{account}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Merchant</label>
-                  <input
-                    type="text"
-                    value={formData.merchant}
-                    onChange={(e) => handleFormChange('merchant', e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter merchant name"
-                  />
-                </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Date</label>
+                <input type="date" value={formData.date} onChange={e => handleFormChange('date', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" required />
               </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="recurring"
-                  checked={formData.recurring}
-                  onChange={(e) => handleFormChange('recurring', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="recurring" className="text-sm text-gray-700 cursor-pointer">
-                  This is a recurring transaction
-                </label>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Time</label>
+                <input type="time" value={formData.time} onChange={e => handleFormChange('time', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Account</label>
+                <select value={formData.account} onChange={e => handleFormChange('account', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90">
+                  {accounts.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Merchant</label>
+                <input type="text" value={formData.merchant} onChange={e => handleFormChange('merchant', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90" />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Type</label>
+                <select value={formData.type} onChange={e => handleFormChange('type', e.target.value)} className="w-full border border-blue-200 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90">
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" checked={formData.recurring} onChange={e => handleFormChange('recurring', e.target.checked)} id="recurring" className="accent-blue-600 scale-125" />
+                <label htmlFor="recurring" className="text-sm font-medium text-gray-700">Recurring</label>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-              <Button type="submit" className="flex-1">
-                <Save className="w-4 h-4 mr-2" />
-                {isEditMode ? 'Update' : 'Add'} Transaction
-              </Button>
-              <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
-                Cancel
-              </Button>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={closeModal} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{isEditMode ? 'Save' : 'Add'}</Button>
             </div>
           </form>
-        </Modal>
+        </FullscreenModal>
 
         {/* Quick Stats Footer */}
         <Card>

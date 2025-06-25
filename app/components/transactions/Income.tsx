@@ -2,6 +2,8 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, DollarSign, TrendingUp, Calendar, Filter, Eye, EyeOff, X, Save } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar } from 'recharts';
+import FullscreenModal from "../common/FullscreenModal";
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Enhanced shadcn-style components with proper TypeScript
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -110,18 +112,6 @@ const Badge = ({ children, variant = "default", className = "" }: {
   );
 };
 
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: ReactNode }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto max-h-[90vh] overflow-y-auto border border-gray-200/50">
-        {children}
-      </div>
-    </div>
-  );
-};
-
 interface IncomeTransaction {
   id: number;
   source: string;
@@ -132,16 +122,8 @@ interface IncomeTransaction {
 }
 
 const IncomePage = () => {
-  const [incomeData, setIncomeData] = useState<IncomeTransaction[]>([
-    { id: 1, source: 'Software Engineer - TechCorp', amount: 4800, date: '2024-06-20', category: 'Salary', recurring: true },
-    { id: 2, source: 'Web Development Project', amount: 1200, date: '2024-06-15', category: 'Freelance', recurring: false },
-    { id: 3, source: 'Stock Dividends', amount: 180, date: '2024-06-10', category: 'Investment', recurring: true },
-    { id: 4, source: 'E-commerce Store', amount: 650, date: '2024-06-08', category: 'Business', recurring: false },
-    { id: 5, source: 'Apartment Rental', amount: 900, date: '2024-06-01', category: 'Real Estate', recurring: true },
-    { id: 6, source: 'Consulting Work', amount: 800, date: '2024-05-28', category: 'Freelance', recurring: false },
-    { id: 7, source: 'Bonus Payment', amount: 1500, date: '2024-05-25', category: 'Salary', recurring: false }
-  ]);
-
+  const { data, usingMockData, showMockWarning, onRealDataAdded } = useFinancialData();
+  const [incomeData, setIncomeData] = useState<IncomeTransaction[]>(data.transactions);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -253,6 +235,7 @@ const IncomePage = () => {
     }
     
     setIsModalOpen(false);
+    onRealDataAdded();
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string | boolean) => {
@@ -501,91 +484,46 @@ const IncomePage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal */}
-        <Modal isOpen={isModalOpen} onClose={closeModal}>
-          <div className="p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
-                {editingItem ? 'Edit Income' : 'Add New Income'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={closeModal} className="h-8 w-8 p-0 pointer-events-auto cursor-pointer">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Modal for Add/Edit */}
+        <FullscreenModal isOpen={isModalOpen} onClose={closeModal}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{editingItem ? 'Edit' : 'Add'} Income</h2>
+          <form onSubmit={handleSubmit} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Income Source *</label>
-                <Input
-                  value={formData.source}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('source', e.target.value)}
-                  placeholder="e.g., Software Engineer - TechCorp"
-                  required
-                />
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Source</label>
+                <Input value={formData.source} onChange={e => handleFormChange('source', e.target.value)} required />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Amount ($) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('amount', e.target.value)}
-                  placeholder="0.00"
-                  required
-                />
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Amount</label>
+                <Input type="number" value={formData.amount} onChange={e => handleFormChange('amount', e.target.value)} required />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('date', e.target.value)}
-                  required
-                />
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Date</label>
+                <Input type="date" value={formData.date} onChange={e => handleFormChange('date', e.target.value)} required />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
-                <Select
-                  value={formData.category}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('category', e.target.value)}
-                >
-                  <option value="Salary">Salary</option>
-                  <option value="Freelance">Freelance</option>
-                  <option value="Investment">Investment</option>
-                  <option value="Business">Business</option>
-                  <option value="Real Estate">Real Estate</option>
-                  <option value="Other">Other</option>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <Select value={formData.category} onChange={e => handleFormChange('category', e.target.value)}>
+                  {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                 </Select>
               </div>
-              
-              <div className="flex items-center space-x-2 p-3 bg-slate-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="recurring"
-                  checked={formData.recurring}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('recurring', e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-950"
-                />
-                <label htmlFor="recurring" className="text-sm text-slate-700 cursor-pointer">
-                  This is a recurring income source
-                </label>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" checked={formData.recurring} onChange={e => handleFormChange('recurring', e.target.checked)} id="recurring" className="accent-blue-600 scale-125" />
+                <label htmlFor="recurring" className="text-sm font-medium text-gray-700">Recurring</label>
               </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-                <Button variant="outline" onClick={closeModal} className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingItem ? 'Update Income' : 'Add Income'}
-                </Button>
-              </div>
-            </form>
+            </div>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={closeModal} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{editingItem ? 'Save' : 'Add'}</Button>
+            </div>
+          </form>
+        </FullscreenModal>
+
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
           </div>
-        </Modal>
+        )}
       </div>
     </div>
   );

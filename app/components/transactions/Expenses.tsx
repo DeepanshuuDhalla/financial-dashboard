@@ -2,6 +2,9 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, DollarSign, TrendingDown, Calendar, Filter, Eye, EyeOff, X, Save, AlertTriangle, Target, BarChart3, PieChart } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import FullscreenModal from "../common/FullscreenModal";
+import { MOCK_TRANSACTIONS } from '../../lib/mockData';
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Enhanced shadcn-style components with proper TypeScript
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -111,18 +114,6 @@ const Badge = ({ children, variant = "default", className = "" }: {
   );
 };
 
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: ReactNode }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto max-h-[85vh] overflow-y-auto border border-gray-200/50 relative">
-        {children}
-      </div>
-    </div>
-  );
-};
-
 interface ExpenseTransaction {
   id: number;
   description: string;
@@ -138,6 +129,7 @@ interface ExpenseTransaction {
 }
 
 const ExpensesPage = () => {
+  const { data, usingMockData, showMockWarning, onRealDataAdded } = useFinancialData();
   const [expenseData, setExpenseData] = useState<ExpenseTransaction[]>([
     { id: 1, description: 'Rent Payment - Downtown Apt', amount: 1200, date: '2024-06-20', category: 'Housing', subcategory: 'Rent', recurring: true, priority: 'high', budget: 1200, merchant: 'Property Manager', paymentMethod: 'Bank Transfer' },
     { id: 2, description: 'Whole Foods Market', amount: 127.85, date: '2024-06-19', category: 'Food', subcategory: 'Groceries', recurring: false, priority: 'medium', budget: 500, merchant: 'Whole Foods', paymentMethod: 'Credit Card' },
@@ -300,6 +292,7 @@ const ExpensesPage = () => {
     }
     
     setIsModalOpen(false);
+    onRealDataAdded();
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string | boolean) => {
@@ -332,6 +325,12 @@ const ExpensesPage = () => {
     <div className="min-h-screen bg-slate-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -631,143 +630,60 @@ const ExpensesPage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal */}
-        <Modal isOpen={isModalOpen} onClose={closeModal}>
-          <div className="p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
-                {editingItem ? 'Edit Expense' : 'Add New Expense'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={closeModal} className="h-8 w-8 p-0 pointer-events-auto cursor-pointer">
-                <X className="w-4 h-4" />
-              </Button>
+        {/* Modal for Add/Edit */}
+        <FullscreenModal isOpen={isModalOpen} onClose={closeModal}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{editingItem ? 'Edit' : 'Add'} Expense</h2>
+          <form onSubmit={handleSubmit} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description</label>
+                <Input value={formData.description} onChange={e => handleFormChange('description', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Amount</label>
+                <Input type="number" value={formData.amount} onChange={e => handleFormChange('amount', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Date</label>
+                <Input type="date" value={formData.date} onChange={e => handleFormChange('date', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <Select value={formData.category} onChange={e => handleFormChange('category', e.target.value)}>
+                  {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Subcategory</label>
+                <Input value={formData.subcategory} onChange={e => handleFormChange('subcategory', e.target.value)} />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Merchant</label>
+                <Input value={formData.merchant} onChange={e => handleFormChange('merchant', e.target.value)} />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Payment Method</label>
+                <Select value={formData.paymentMethod} onChange={e => handleFormChange('paymentMethod', e.target.value)}>
+                  {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Priority</label>
+                <Select value={formData.priority} onChange={e => handleFormChange('priority', e.target.value)}>
+                  {priorities.filter(p => p !== 'All').map(p => <option key={p} value={p.toLowerCase()}>{p}</option>)}
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" checked={formData.recurring} onChange={e => handleFormChange('recurring', e.target.checked)} id="recurring" className="accent-blue-600 scale-125" />
+                <label htmlFor="recurring" className="text-sm font-medium text-gray-700">Recurring</label>
+              </div>
             </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Expense Description *</label>
-                <Input
-                  value={formData.description}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)}
-                  placeholder="e.g., Grocery shopping at Whole Foods"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Amount ($) *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('amount', e.target.value)}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Budget Limit ($)</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.budget}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('budget', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('date', e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
-                  <Select
-                    value={formData.category}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('category', e.target.value)}
-                  >
-                    <option value="Food">Food</option>
-                    <option value="Housing">Housing</option>
-                    <option value="Transportation">Transportation</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Health">Health</option>
-                    <option value="Shopping">Shopping</option>
-                    <option value="Other">Other</option>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Priority</label>
-                  <Select
-                    value={formData.priority}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value as 'low' | 'medium' | 'high')}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Merchant</label>
-                  <Input
-                    value={formData.merchant}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('merchant', e.target.value)}
-                    placeholder="e.g., Whole Foods Market"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
-                  <Select
-                    value={formData.paymentMethod}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('paymentMethod', e.target.value)}
-                  >
-                    {paymentMethods.map(method => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 p-3 bg-slate-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="recurring"
-                  checked={formData.recurring}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('recurring', e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-950"
-                />
-                <label htmlFor="recurring" className="text-sm text-slate-700 cursor-pointer">
-                  This is a recurring expense
-                </label>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-                <Button variant="outline" onClick={closeModal} className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingItem ? 'Update Expense' : 'Add Expense'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </Modal>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={closeModal} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{editingItem ? 'Save' : 'Add'}</Button>
+            </div>
+          </form>
+        </FullscreenModal>
       </div>
     </div>
   );

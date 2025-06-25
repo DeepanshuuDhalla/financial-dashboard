@@ -10,6 +10,13 @@ import RecurringPage from '../transactions/Recurring';
 import ActiveSavingsPage from '../goals/activeGoals';
 import CompletedGoalsPage from '../goals/completedGoals';
 import ArchivedGoalsPage from '../goals/archivedGoals';
+import BankAccounts from '../accounts/BankAccounts';
+import CreditCards from '../accounts/CreditCards';
+import Investments from '../accounts/Investments';
+import TestSupabaseCRUD from '../accounts/TestSupabaseCRUD';
+import LoginForm from '../auth/LoginForm';
+import { useAuth } from '../../hooks/useAuth';
+
 // Mock data for demo
 const mockTransactions = [
   { id: 1, type: 'expense', category: 'Groceries', amount: -67.50, date: '2025-06-21', description: 'Whole Foods Market', icon: '🛒' },
@@ -31,27 +38,18 @@ const mockGoals = [
   { id: 4, name: 'Home Down Payment', target: 50000, current: 50000, status: 'completed', deadline: '2025-03-01', priority: 'high' }
 ];
 
-interface PageProps {}
-
-const Page: React.FC<PageProps> = () => {
+const Page: React.FC<unknown> = () => {
   const [isSidebarOpen, setSidebarOpen] = useState<boolean>(false)
   const [currentRoute, setCurrentRoute] = useState<string>('dashboard')
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [balanceVisible, setBalanceVisible] = useState(true);
-  const [aiInsights, setAiInsights] = useState(true);
+  const { user, userId, loading: authLoading } = useAuth();
 
-  // Sample data calculations
-  const totalBalance = 12847.50;
-  const monthlyIncome = 3800;
-  const monthlyExpenses = 2600;
-  const savingsRate = ((monthlyIncome - monthlyExpenses) / monthlyIncome * 100).toFixed(1);
+  // Redirect to default subpages for main sections
+  useEffect(() => {
+    if (currentRoute === 'transactions') setCurrentRoute('all-transactions');
+    if (currentRoute === 'goals') setCurrentRoute('active-goals');
+    if (currentRoute === 'accounts') setCurrentRoute('bank-accounts');
+  }, [currentRoute]);
 
-  const activeGoals = mockGoals.filter(goal => goal.status === 'active');
-  const completedGoals = mockGoals.filter(goal => goal.status === 'completed');
-
-  const recentTransactions = mockTransactions.slice(0, 5);
-  const incomeTransactions = mockTransactions.filter(t => t.type === 'income');
-  const expenseTransactions = mockTransactions.filter(t => t.type === 'expense');
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleResize = () => {
@@ -80,10 +78,36 @@ const Page: React.FC<PageProps> = () => {
   }
 
   const handleRouteChange = (route: string) => {
-    setCurrentRoute(route)
+    // Redirect to default subpages for main sections
+    if (route === 'transactions') {
+      setCurrentRoute('all-transactions');
+    } else if (route === 'goals') {
+      setCurrentRoute('active-goals');
+    } else if (route === 'accounts') {
+      setCurrentRoute('bank-accounts');
+    } else {
+      setCurrentRoute(route);
+    }
     if (window.innerWidth < 1024) {
       setSidebarOpen(false)
     }
+  }
+
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm />;
   }
 
   return (
@@ -95,11 +119,7 @@ const Page: React.FC<PageProps> = () => {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-r from-green-200/20 to-blue-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <Navbar 
-        onToggleSidebar={handleToggleSidebar} 
-        sidebarOpen={isSidebarOpen}
-        currentRoute={currentRoute}
-      />
+      <Navbar onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)} sidebarOpen={isSidebarOpen} />
       
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -121,6 +141,10 @@ const Page: React.FC<PageProps> = () => {
           {currentRoute === 'active-goals' && <ActiveSavingsPage />}
           {currentRoute === 'completed-goals' && <CompletedGoalsPage />}
           {currentRoute === 'archived-goals' && <ArchivedGoalsPage />}
+          {currentRoute === 'bank-accounts' && <BankAccounts userId={userId!} />}
+          {currentRoute === 'credit-cards' && <CreditCards userId={userId!} />}
+          {currentRoute === 'investments' && <Investments userId={userId!} />}
+          {currentRoute === 'test-crud' && <TestSupabaseCRUD userId={userId!} />}
           {/* Add more route conditions as needed */}
         </div>
       </main>

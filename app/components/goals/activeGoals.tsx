@@ -2,6 +2,8 @@
 import React, { useState, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, Target, TrendingUp, Calendar, Eye, EyeOff, X, Save, Zap, Award, Clock, CheckCircle2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import FullscreenModal from "../common/FullscreenModal";
+import { MOCK_GOALS } from '../../lib/mockData';
 
 // Enhanced shadcn-style components
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -84,7 +86,7 @@ const Select = ({ children, value, onChange, className = "" }: {
 }) => (
   <select
     value={value}
-    onChange={onChange}
+    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e)}
     className={`flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 ${className}`}
   >
     {children}
@@ -108,18 +110,6 @@ const Badge = ({ children, variant = "default", className = "" }: {
   return (
     <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${variants[variant]} ${className}`}>
       {children}
-    </div>
-  );
-};
-
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: ReactNode }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto max-h-[85vh] overflow-y-auto border border-slate-200 relative">
-        {children}
-      </div>
     </div>
   );
 };
@@ -149,69 +139,8 @@ interface SavingsGoal {
 }
 
 const ActiveSavingsPage = () => {
-  const [savingsData, setSavingsData] = useState<SavingsGoal[]>([
-    {
-      id: 1,
-      name: 'Emergency Fund',
-      targetAmount: 15000,
-      currentAmount: 8500,
-      targetDate: '2024-12-31',
-      category: 'Emergency',
-      priority: 'High',
-      description: 'Build a 6-month emergency fund for financial security',
-      monthlyTarget: 1000,
-      createdDate: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: 'New Car Down Payment',
-      targetAmount: 25000,
-      currentAmount: 12800,
-      targetDate: '2024-10-15',
-      category: 'Transportation',
-      priority: 'Medium',
-      description: 'Save for a reliable vehicle down payment',
-      monthlyTarget: 1500,
-      createdDate: '2024-02-01'
-    },
-    {
-      id: 3,
-      name: 'Vacation to Japan',
-      targetAmount: 8000,
-      currentAmount: 3200,
-      targetDate: '2024-08-30',
-      category: 'Travel',
-      priority: 'Low',
-      description: 'Two-week vacation exploring Japan',
-      monthlyTarget: 800,
-      createdDate: '2024-03-10'
-    },
-    {
-      id: 4,
-      name: 'Home Renovation',
-      targetAmount: 35000,
-      currentAmount: 18500,
-      targetDate: '2025-03-01',
-      category: 'Home',
-      priority: 'High',
-      description: 'Kitchen and bathroom renovation project',
-      monthlyTarget: 2000,
-      createdDate: '2024-01-20'
-    },
-    {
-      id: 5,
-      name: 'Investment Portfolio',
-      targetAmount: 50000,
-      currentAmount: 22000,
-      targetDate: '2025-06-30',
-      category: 'Investment',
-      priority: 'Medium',
-      description: 'Build diversified investment portfolio',
-      monthlyTarget: 2500,
-      createdDate: '2024-02-15'
-    }
-  ]);
-
+  const [savingsData, setSavingsData] = useState<SavingsGoal[]>([]);
+  const [showMockWarning, setShowMockWarning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -228,6 +157,26 @@ const ActiveSavingsPage = () => {
     description: '',
     monthlyTarget: ''
   });
+
+  React.useEffect(() => {
+    // Simulate fetching from Supabase, fallback to mock if empty
+    // Replace with real Supabase fetch if needed
+    if (Array.isArray(MOCK_GOALS) && MOCK_GOALS.length > 0) {
+      setSavingsData(MOCK_GOALS.map((g, i) => ({
+        id: typeof g.id === 'number' ? g.id : i + 1,
+        name: g.name ?? '',
+        targetAmount: g.target_amount ?? 0,
+        currentAmount: g.current_amount ?? 0,
+        targetDate: g.target_date ?? '',
+        category: g.category ?? '',
+        priority: (g.priority as 'High' | 'Medium' | 'Low') ?? 'Medium',
+        description: g.description ?? '',
+        monthlyTarget: g.monthly_target ?? 0,
+        createdDate: g.created_date ?? '',
+      })));
+      setShowMockWarning(true);
+    }
+  }, []);
 
   // Calculate statistics
   const totalTargetAmount = savingsData.reduce((sum, goal) => sum + goal.targetAmount, 0);
@@ -640,128 +589,60 @@ const ActiveSavingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal */}
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                {editingItem ? 'Edit Savings Goal' : 'Add New Savings Goal'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(false)} className="pointer-events-auto cursor-pointer">
-                <X className="w-4 h-4" />
-              </Button>
+        {/* Modal for Add/Edit */}
+        <FullscreenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{editingItem ? 'Edit' : 'Add'} Savings Goal</h2>
+          <form onSubmit={(e: React.FormEvent) => handleSubmit(e)} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Goal Name</label>
+                <Input value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('name', e.target.value)} placeholder="e.g., Emergency Fund" required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Target Amount</label>
+                <Input type="number" value={formData.targetAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Current Amount</label>
+                <Input type="number" value={formData.currentAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('currentAmount', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Target Date</label>
+                <Input type="date" value={formData.targetDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetDate', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <Select value={formData.category} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('category', e.target.value)}>
+                  {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Priority</label>
+                <Select value={formData.priority} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value)}>
+                  {priorities.filter(p => p !== 'All').map(p => <option key={p} value={p}>{p}</option>)}
+                </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description</label>
+                <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Monthly Target</label>
+                <Input type="number" value={formData.monthlyTarget} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', e.target.value)} />
+              </div>
             </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Goal Name *</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('name', e.target.value)}
-                    placeholder="e.g., Emergency Fund"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
-                  <Select
-                    value={formData.category}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('category', e.target.value)}
-                  >
-                    <option value="Emergency">Emergency</option>
-                    <option value="Transportation">Transportation</option>
-                    <option value="Travel">Travel</option>
-                    <option value="Home">Home</option>
-                    <option value="Investment">Investment</option>
-                    <option value="Education">Education</option>
-                    <option value="Health">Health</option>
-                    <option value="Other">Other</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Amount ($) *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.targetAmount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', e.target.value)}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Current Amount ($)</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.currentAmount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('currentAmount', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Date *</label>
-                  <Input
-                    type="date"
-                    value={formData.targetDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetDate', e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Priority</label>
-                  <Select
-                    value={formData.priority}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value as 'High' | 'Medium' | 'Low')}
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Monthly Target ($)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.monthlyTarget}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFormChange('description', e.target.value)}
-                  className="flex w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
-                  placeholder="Describe your savings goal..."
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-200">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingItem ? 'Update Goal' : 'Create Goal'}
-                </Button>
-              </div>
-            </form>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{editingItem ? 'Save' : 'Add'}</Button>
+            </div>
+          </form>
+        </FullscreenModal>
+
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
           </div>
-        </Modal>
+        )}
       </div>
     </div>
   );

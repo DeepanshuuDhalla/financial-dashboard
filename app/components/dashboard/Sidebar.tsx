@@ -31,9 +31,14 @@ import {
   ArrowDownRight,
   Globe,
   Smartphone,
-  Headphones
+  Headphones,
+  CheckCircle2,
+  LogOut
 } from 'lucide-react';
 import { useFinancialData } from '../../hooks/useFinancialData';
+import { useAuth } from '../../hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { MOCK_TRANSACTIONS, MOCK_ACCOUNTS } from '../../lib/mockData';
 
 interface MenuItemType {
   key: string;
@@ -67,16 +72,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [aiInsights, setAiInsights] = useState<boolean>(true);
   const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
-  const { data, loading } = useFinancialData();
+  const { data, usingMockData, showMockWarning, onRealDataAdded } = useFinancialData();
+  const { signOut } = useAuth();
+  const router = useRouter();
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [totalBalance, setTotalBalance] = useState<number>(0);
 
   const user = data?.user;
-  const accounts = user?.accounts || [];
-  const totalBalance = accounts.reduce((sum: number, acc: any) => sum + (acc.balance || 0), 0);
-  const recentActivity = data?.recentActivity || [];
-  const activeGoals = data?.goals?.active?.length || 0;
-  const completedGoals = data?.goals?.completed?.length || 0;
-  const archivedGoals = data?.goals?.archived?.length || 0;
-  const transactionsCount = data?.transactions?.all?.length || 0;
 
   const toggleExpandedMenu = (menuKey: string) => {
     setExpandedMenus(prev => ({
@@ -85,59 +87,61 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
     }));
   };
 
-  const mainMenuItems: MenuItemType[] = [
+  const menuItems: MenuItemType[] = [
     {
       key: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      badge: null,
       path: '/dashboard',
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      bgColor: 'bg-blue-50',
+      gradient: 'from-blue-500 to-blue-600'
     },
     {
       key: 'transactions',
       label: 'Transactions',
       icon: Receipt,
-      badge: transactionsCount ? String(transactionsCount) : null,
       path: '/transactions',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+      gradient: 'from-green-500 to-green-600',
       submenu: [
-        { key: 'all-transactions', label: 'All Transactions', icon: Receipt, path: '/transactions/all', color: 'text-gray-600', bgColor: 'bg-gray-50' },
-        { key: 'income', label: 'Income', icon: TrendingUp, path: '/transactions/income', color: 'text-green-600', bgColor: 'bg-green-50' },
-        { key: 'expenses', label: 'Expenses', icon: TrendingDown, path: '/transactions/expenses', color: 'text-red-600', bgColor: 'bg-red-50' },
-        { key: 'recurring', label: 'Recurring', icon: Calendar, path: '/transactions/recurring', color: 'text-purple-600', bgColor: 'bg-purple-50' },
+        { key: 'all-transactions', label: 'All Transactions', icon: Receipt, path: '/all-transactions' },
+        { key: 'income', label: 'Income', icon: TrendingUp, path: '/income' },
+        { key: 'expenses', label: 'Expenses', icon: TrendingDown, path: '/expenses' },
+        { key: 'recurring', label: 'Recurring', icon: Calendar, path: '/recurring' }
       ]
     },
     {
       key: 'goals',
-      label: 'Savings Goals',
+      label: 'Goals',
       icon: Target,
-      badge: String(activeGoals),
       path: '/goals',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      gradient: 'from-purple-500 to-purple-600',
       submenu: [
-        { key: 'active-goals', label: 'Active Goals', icon: Target, path: '/goals/active', color: 'text-green-600', bgColor: 'bg-green-50' },
-        { key: 'completed-goals', label: 'Completed', icon: Bookmark, path: '/goals/completed', color: 'text-blue-600', bgColor: 'bg-blue-50' },
-        { key: 'archived-goals', label: 'Archived', icon: Archive, path: '/goals/archived', color: 'text-gray-600', bgColor: 'bg-gray-50' },
+        { key: 'active-goals', label: 'Active Goals', icon: Target, path: '/active-goals' },
+        { key: 'completed-goals', label: 'Completed', icon: CheckCircle2, path: '/completed-goals' },
+        { key: 'archived-goals', label: 'Archived', icon: Archive, path: '/archived-goals' }
       ]
     },
     {
       key: 'accounts',
       label: 'Accounts',
-      icon: Wallet,
-      badge: null,
+      icon: CreditCard,
       path: '/accounts',
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-50',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      gradient: 'from-orange-500 to-orange-600',
       submenu: [
-        { key: 'bank-accounts', label: 'Bank Accounts', icon: Wallet, path: '/accounts/bank', color: 'text-blue-600', bgColor: 'bg-blue-50' },
-        { key: 'credit-cards', label: 'Credit Cards', icon: CreditCard, path: '/accounts/credit', color: 'text-red-600', bgColor: 'bg-red-50' },
-        { key: 'investments', label: 'Investments', icon: TrendingUp, path: '/accounts/investments', color: 'text-green-600', bgColor: 'bg-green-50' },
+        { key: 'bank-accounts', label: 'Bank Accounts', icon: Wallet, path: '/bank-accounts' },
+        { key: 'credit-cards', label: 'Credit Cards', icon: CreditCard, path: '/credit-cards' },
+        { key: 'investments', label: 'Investments', icon: TrendingUp, path: '/investments' },
+        { key: 'test-crud', label: 'Test CRUD', icon: Zap, path: '/test-crud' }
       ]
-    }
+    },
+    
   ];
 
   const quickActions: QuickActionType[] = [
@@ -183,27 +187,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
     { key: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help', color: 'text-orange-600', bgColor: 'bg-orange-50' },
   ];
 
+  const handleMenuClick = (item: MenuItemType) => {
+    if (item.submenu) {
+      toggleExpandedMenu(item.key);
+    } else {
+      onRouteChange(item.key);
+    }
+  };
+
   const MenuItem: React.FC<{ item: MenuItemType; level?: number }> = ({ item, level = 0 }) => {
     const isActive = currentRoute === item.key;
     const isExpanded = expandedMenus[item.key];
     const hasSubmenu = item.submenu && item.submenu.length > 0;
-    
     return (
       <div className="mb-1">
         <button
-          onClick={() => {
-            onRouteChange(item.key);
-            if (hasSubmenu) {
-              toggleExpandedMenu(item.key);
-            }
-          }}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group relative overflow-hidden ${
-            isActive 
-              ? 'bg-gradient-to-r from-white to-gray-50 text-gray-900 shadow-lg border border-gray-200/50 scale-105' 
-              : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 hover:shadow-md'
-          } ${level > 0 ? 'ml-6 mr-2' : ''}`}
+          onClick={() => handleMenuClick(item)}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group relative overflow-hidden ${isActive ? 'bg-gradient-to-r from-white to-gray-50 text-gray-900 shadow-lg border border-gray-200/50 scale-105' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 hover:shadow-md'} ${level > 0 ? 'ml-6 mr-2' : ''}`}
         >
-          {/* Simplified background gradient - no blur during scroll */}
           <div className={`absolute inset-0 bg-gradient-to-r ${item.gradient || 'from-gray-100 to-gray-50'} opacity-0 group-hover:opacity-20 transition-opacity duration-200 rounded-2xl`}></div>
           
           <div className="flex items-center space-x-3 relative z-10">
@@ -240,7 +241,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
             )}
           </div>
         </button>
-
         {hasSubmenu && isExpanded && (
           <div className="mt-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
             {item.submenu!.map((subItem) => (
@@ -258,6 +258,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
       onClose();
     }
   }, [currentRoute, onClose]);
+
+  useEffect(() => {
+    if (usingMockData) {
+      setRecentActivity(MOCK_TRANSACTIONS.slice(0, 5));
+      setTotalBalance(MOCK_ACCOUNTS.reduce((sum, acc) => sum + acc.balance, 0));
+    } else {
+      setRecentActivity(data?.transactions?.all?.slice(0, 5) || []);
+      setTotalBalance((data?.accounts || []).reduce((sum: number, acc: any) => sum + (acc.balance || 0), 0));
+    }
+  }, [usingMockData, data]);
 
   return (
     <>
@@ -333,7 +343,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
                   <h3 className="font-semibold text-gray-800 text-sm">Navigation</h3>
                   <Activity className="w-4 h-4 text-gray-400" />
                 </div>
-                {mainMenuItems.map((item) => (
+                {menuItems.map((item) => (
                   <MenuItem key={item.key} item={item} />
                 ))}
               </div>
@@ -348,6 +358,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
                   </div>
                 </div>
                 <div className="space-y-3">
+                  {showMockWarning && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+                      Test version: Showing mock data.
+                    </div>
+                  )}
                   {recentActivity.map((activity: any) => (
                     <div key={activity.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 transition-colors duration-200">
                       <div className="flex items-center space-x-3">
@@ -422,50 +437,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
                   </div>
                 </div>
               </div>
-
-              {/* Bottom Navigation - Desktop */}
-              <div className="mt-8 hidden lg:block">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800 text-sm">Account</h3>
-                  <User className="w-4 h-4 text-gray-400" />
-                </div>
-                <div className="space-y-1">
-                  {bottomMenuItems.map((item) => (
-                    <button
-                      key={item.key}
-                      onClick={() => onRouteChange(item.key)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all duration-200 text-sm group ${
-                        currentRoute === item.key
-                          ? 'bg-white text-gray-900 shadow-lg border border-gray-200/50'
-                          : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'
-                      }`}
-                    >
-                      <div className={`p-2 rounded-xl transition-all duration-200 ${
-                        currentRoute === item.key 
-                          ? `${item.bgColor} shadow-sm` 
-                          : `group-hover:${item.bgColor}`
-                      }`}>
-                        <item.icon className={`w-4 h-4 ${
-                          currentRoute === item.key ? item.color : `text-gray-500 group-hover:${item.color}`
-                        }`} />
-                      </div>
-                      <span className="font-medium">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-
-              {/* Mobile Bottom Navigation */}
-              <div className="mt-8 lg:hidden pb-4">
-                <h3 className="font-semibold text-gray-800 text-sm mb-4">Account</h3>
-                <div className="space-y-1">
-                  {bottomMenuItems.map((item) => (
-                    <MenuItem key={item.key} item={item} />
-                  ))}
-                </div>
-              </div>
-            </div>
+             </div>
           </div>
 
           {/* Footer Area */}
@@ -545,6 +517,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onRouteChange, curre
               </div>
             </div>
           </div>    
+        </div>
+
+        {/* Logout Button */}
+        <div className="mt-auto p-4">
+          <button
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-lg font-semibold hover:bg-red-100 transition-colors border border-red-100 shadow-sm"
+            onClick={async () => { await signOut(); router.push('/'); }}
+          >
+            <LogOut className="w-5 h-5" /> Logout
+          </button>
         </div>
       </aside>
     </>

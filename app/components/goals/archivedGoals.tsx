@@ -3,6 +3,8 @@ import React, { useState, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, Target, TrendingUp, Calendar, Eye, EyeOff, X, Save, Zap, Award, Clock, CheckCircle2, Archive, RotateCcw, Star, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useFinancialData } from '../../hooks/useFinancialData';
+import FullscreenModal from "../common/FullscreenModal";
+import { MOCK_GOALS } from '../../lib/mockData';
 
 // Enhanced shadcn-style components
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -113,18 +115,6 @@ const Badge = ({ children, variant = "default", className = "" }: {
   );
 };
 
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: ReactNode }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto max-h-[85vh] overflow-y-auto border border-slate-200 relative">
-        {children}
-      </div>
-    </div>
-  );
-};
-
 interface ArchivedGoal {
   id: string;
   name: string;
@@ -167,16 +157,38 @@ const ArchivedGoalsPage = () => {
   const [editingItem, setEditingItem] = useState<ArchivedGoal | null>(null);
   const [formData, setFormData] = useState(defaultForm);
   const [showAmounts, setShowAmounts] = useState(true);
+  const [showMockWarning, setShowMockWarning] = useState(false);
 
   // Load initial data from JSON
   React.useEffect(() => {
     if (data && data.goals && data.goals.archived) {
-      setArchivedData(data.goals.archived.map((g: any) => ({
-        ...g,
-        id: g.id || Math.random().toString(36).slice(2),
-        progress: g.progress || Math.round((g.currentAmount / g.targetAmount) * 100),
-        daysOverdue: g.daysOverdue || 0,
-      })));
+      if (data.goals.archived.length === 0) {
+        setArchivedData(MOCK_GOALS.map(g => ({
+          id: g.id,
+          name: g.name,
+          targetAmount: g.target_amount,
+          currentAmount: g.current_amount,
+          targetDate: g.target_date,
+          category: g.category,
+          priority: g.priority as 'High' | 'Medium' | 'Low',
+          description: g.description,
+          monthlyTarget: g.monthly_target,
+          createdDate: g.created_date,
+          archivedDate: g.archived_date || '',
+          archiveReason: ((g.archive_reason ?? 'Other') as 'Cancelled' | 'Postponed' | 'Changed' | 'Achieved' | 'Other'),
+          progress: g.progress || Math.round((g.current_amount / g.target_amount) * 100),
+          daysOverdue: g.days_overdue || 0,
+        })));
+        setShowMockWarning(true);
+      } else {
+        setArchivedData(data.goals.archived.map((g: any) => ({
+          ...g,
+          id: g.id || Math.random().toString(36).slice(2),
+          progress: g.progress || Math.round((g.currentAmount / g.targetAmount) * 100),
+          daysOverdue: g.daysOverdue || 0,
+        })));
+        setShowMockWarning(false);
+      }
     }
   }, [data]);
 
@@ -310,6 +322,12 @@ const ArchivedGoalsPage = () => {
             </Button>
           </div>
         </div>
+
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -572,83 +590,58 @@ const ArchivedGoalsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal */}
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                {editingItem ? 'Edit Archived Goal' : 'Add Archived Goal'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(false)} className="pointer-events-auto cursor-pointer">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Modal for Add/Edit */}
+        <FullscreenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{editingItem ? 'Edit' : 'Add'} Archived Goal</h2>
+          <form onSubmit={handleSubmit} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Name *</label>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Name</label>
                 <Input value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('name', e.target.value)} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Amount *</label>
-                  <Input type="number" value={formData.targetAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', Number(e.target.value))} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Current Amount *</label>
-                  <Input type="number" value={formData.currentAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('currentAmount', Number(e.target.value))} required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Target Date *</label>
-                  <Input type="date" value={formData.targetDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetDate', e.target.value)} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Archived Date *</label>
-                  <Input type="date" value={formData.archivedDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('archivedDate', e.target.value)} required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Category *</label>
-                  <Input value={formData.category} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('category', e.target.value)} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Priority *</label>
-                  <Select value={formData.priority} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value)}>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Monthly Target</label>
-                  <Input type="number" value={formData.monthlyTarget} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', Number(e.target.value))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Archive Reason *</label>
-                  <Select value={formData.archiveReason} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('archiveReason', e.target.value)}>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="Postponed">Postponed</option>
-                    <option value="Changed">Changed</option>
-                    <option value="Achieved">Achieved</option>
-                    <option value="Other">Other</option>
-                  </Select>
-                </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Target Amount</label>
+                <Input type="number" value={formData.targetAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetAmount', e.target.value)} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Current Amount</label>
+                <Input type="number" value={formData.currentAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('currentAmount', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Target Date</label>
+                <Input type="date" value={formData.targetDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('targetDate', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <Input value={formData.category} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('category', e.target.value)} />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Priority</label>
+                <Select value={formData.priority} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('priority', e.target.value)}>
+                  {['High', 'Medium', 'Low'].map(p => <option key={p} value={p}>{p}</option>)}
+                </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description</label>
                 <Input value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)} />
               </div>
-              <div className="flex justify-end gap-2 mt-6">
-                <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">Cancel</Button>
-                <Button variant="success" type="submit">{editingItem ? 'Save Changes' : 'Add Goal'}</Button>
+              <div className="sm:col-span-2">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Monthly Target</label>
+                <Input type="number" value={formData.monthlyTarget} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('monthlyTarget', e.target.value)} />
               </div>
-            </form>
-          </div>
-        </Modal>
+              <div className="sm:col-span-2">
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Archive Reason</label>
+                <Select value={formData.archiveReason} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('archiveReason', e.target.value)}>
+                  {reasons.filter(r => r !== 'All').map(r => <option key={r} value={r}>{r}</option>)}
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{editingItem ? 'Save' : 'Add'}</Button>
+            </div>
+          </form>
+        </FullscreenModal>
       </div>
     </div>
   );

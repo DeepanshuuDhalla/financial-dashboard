@@ -2,6 +2,9 @@
 import React, { useState, useEffect, ReactNode } from 'react';
 import { Plus, Search, Edit, Trash2, DollarSign, Calendar, Filter, Eye, EyeOff, X, Save, Clock, Repeat, AlertTriangle, Target, BarChart3, PieChart, Play, Pause, Settings, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import FullscreenModal from "../common/FullscreenModal";
+import { MOCK_TRANSACTIONS } from '../../lib/mockData';
+import { useFinancialData } from '../../hooks/useFinancialData';
 
 // Enhanced shadcn-style components with proper TypeScript
 const Card = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
@@ -112,18 +115,6 @@ const Badge = ({ children, variant = "default", className = "" }: {
   );
 };
 
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: ReactNode }) => {
-  if (!isOpen) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto max-h-[85vh] overflow-y-auto border border-gray-200/50 relative">
-        {children}
-      </div>
-    </div>
-  );
-};
-
 interface RecurringTransaction {
   id: number;
   description: string;
@@ -142,17 +133,8 @@ interface RecurringTransaction {
 }
 
 const RecurringPage = () => {
-  const [recurringData, setRecurringData] = useState<RecurringTransaction[]>([
-    { id: 1, description: 'Salary - Tech Corp', amount: 4800, type: 'income', category: 'Salary', frequency: 'monthly', nextDue: '2024-07-01', lastProcessed: '2024-06-01', status: 'active', autoRenew: true, merchant: 'Tech Corp', paymentMethod: 'Direct Deposit', priority: 'high', notes: 'Monthly salary payment' },
-    { id: 2, description: 'Rent Payment', amount: 1200, type: 'expense', category: 'Housing', frequency: 'monthly', nextDue: '2024-07-01', lastProcessed: '2024-06-01', status: 'active', autoRenew: true, merchant: 'Property Manager', paymentMethod: 'Bank Transfer', priority: 'high', notes: 'Monthly rent payment' },
-    { id: 3, description: 'Netflix Subscription', amount: 15.99, type: 'expense', category: 'Entertainment', frequency: 'monthly', nextDue: '2024-06-15', lastProcessed: '2024-05-15', status: 'active', autoRenew: true, merchant: 'Netflix', paymentMethod: 'Credit Card', priority: 'low', notes: 'Streaming service' },
-    { id: 4, description: 'Gym Membership', amount: 49.99, type: 'expense', category: 'Health', frequency: 'monthly', nextDue: '2024-06-14', lastProcessed: '2024-05-14', status: 'active', autoRenew: true, merchant: 'Local Gym', paymentMethod: 'Bank Transfer', priority: 'medium', notes: 'Fitness membership' },
-    { id: 5, description: 'Electric Bill', amount: 89.42, type: 'expense', category: 'Utilities', frequency: 'monthly', nextDue: '2024-06-16', lastProcessed: '2024-05-16', status: 'active', autoRenew: true, merchant: 'Electric Company', paymentMethod: 'Auto Pay', priority: 'high', notes: 'Monthly electricity bill' },
-    { id: 6, description: 'Freelance Project', amount: 1200, type: 'income', category: 'Freelance', frequency: 'monthly', nextDue: '2024-07-15', lastProcessed: '2024-06-15', status: 'active', autoRenew: false, merchant: 'Client XYZ', paymentMethod: 'PayPal', priority: 'medium', notes: 'Monthly freelance work' },
-    { id: 7, description: 'Internet Bill', amount: 79.99, type: 'expense', category: 'Utilities', frequency: 'monthly', nextDue: '2024-06-06', lastProcessed: '2024-05-06', status: 'paused', autoRenew: true, merchant: 'ISP Provider', paymentMethod: 'Credit Card', priority: 'high', notes: 'Internet service' },
-    { id: 8, description: 'Dividend Payment', amount: 45.67, type: 'income', category: 'Investment', frequency: 'quarterly', nextDue: '2024-09-01', lastProcessed: '2024-06-01', status: 'active', autoRenew: true, merchant: 'Apple Inc', paymentMethod: 'Direct Deposit', priority: 'low', notes: 'Quarterly dividend' }
-  ]);
-
+  const { data, usingMockData, showMockWarning, onRealDataAdded } = useFinancialData();
+  const [recurringData, setRecurringData] = useState<RecurringTransaction[]>(data.transactions.filter(t => t.recurring));
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -326,6 +308,7 @@ const RecurringPage = () => {
     }
     
     setIsModalOpen(false);
+    onRealDataAdded();
   };
 
   const handleFormChange = (field: keyof typeof formData, value: string | boolean) => {
@@ -374,6 +357,12 @@ const RecurringPage = () => {
     <div className="min-h-screen bg-slate-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -697,170 +686,69 @@ const RecurringPage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal */}
-        <Modal isOpen={isModalOpen} onClose={closeModal}>
-          <div className="p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
-                {editingItem ? 'Edit Recurring Transaction' : 'Add New Recurring Transaction'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={closeModal} className="h-8 w-8 p-0 pointer-events-auto cursor-pointer">
-                <X className="w-4 h-4" />
-              </Button>
+        {/* Modal for Add/Edit */}
+        <FullscreenModal isOpen={isModalOpen} onClose={closeModal}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-900 tracking-wide drop-shadow-lg">{editingItem ? 'Edit' : 'Add'} Recurring Transaction</h2>
+          <form onSubmit={handleSubmit} className="space-y-6 p-4 sm:p-8 w-full max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Description</label>
+                <Input value={formData.description} onChange={e => handleFormChange('description', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Amount</label>
+                <Input type="number" value={formData.amount} onChange={e => handleFormChange('amount', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Type</label>
+                <Select value={formData.type} onChange={e => handleFormChange('type', e.target.value)}>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Category</label>
+                <Select value={formData.category} onChange={e => handleFormChange('category', e.target.value)}>
+                  {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Frequency</label>
+                <Select value={formData.frequency} onChange={e => handleFormChange('frequency', e.target.value)}>
+                  {frequencies.filter(f => f !== 'All').map(f => <option key={f} value={f.toLowerCase()}>{f}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Next Due</label>
+                <Input type="date" value={formData.nextDue} onChange={e => handleFormChange('nextDue', e.target.value)} required />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Merchant</label>
+                <Input value={formData.merchant} onChange={e => handleFormChange('merchant', e.target.value)} />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Payment Method</label>
+                <Select value={formData.paymentMethod} onChange={e => handleFormChange('paymentMethod', e.target.value)}>
+                  {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">Priority</label>
+                <Select value={formData.priority} onChange={e => handleFormChange('priority', e.target.value)}>
+                  {priorities.filter(p => p !== 'All').map(p => <option key={p} value={p.toLowerCase()}>{p}</option>)}
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" checked={formData.autoRenew} onChange={e => handleFormChange('autoRenew', e.target.checked)} id="autoRenew" className="accent-blue-600 scale-125" />
+                <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">Auto Renew</label>
+              </div>
             </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Description *</label>
-                <Input
-                  value={formData.description}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('description', e.target.value)}
-                  placeholder="e.g., Monthly rent payment"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Amount ($) *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('amount', e.target.value)}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Type *</label>
-                  <Select
-                    value={formData.type}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('type', e.target.value as 'income' | 'expense')}
-                  >
-                    <option value="income">Income</option>
-                    <option value="expense">Expense</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
-                  <Select
-                    value={formData.category}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('category', e.target.value)}
-                  >
-                    <option value="Salary">Salary</option>
-                    <option value="Freelance">Freelance</option>
-                    <option value="Investment">Investment</option>
-                    <option value="Housing">Housing</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Health">Health</option>
-                    <option value="Other">Other</option>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Frequency *</label>
-                  <Select
-                    value={formData.frequency}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('frequency', e.target.value as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly')}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Next Due Date *</label>
-                  <Input
-                    type="date"
-                    value={formData.nextDue}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('nextDue', e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                  <Select
-                    value={formData.status}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('status', e.target.value as 'active' | 'paused' | 'cancelled')}
-                  >
-                    <option value="active">Active</option>
-                    <option value="paused">Paused</option>
-                    <option value="cancelled">Cancelled</option>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Merchant</label>
-                  <Input
-                    value={formData.merchant}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('merchant', e.target.value)}
-                    placeholder="e.g., Property Manager"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
-                  <Select
-                    value={formData.paymentMethod}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFormChange('paymentMethod', e.target.value)}
-                  >
-                    {paymentMethods.map(method => (
-                      <option key={method} value={method}>{method}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 p-3 bg-slate-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="autoRenew"
-                  checked={formData.autoRenew}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFormChange('autoRenew', e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-950"
-                />
-                <label htmlFor="autoRenew" className="text-sm text-slate-700 cursor-pointer">
-                  Auto-renew this transaction
-                </label>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFormChange('notes', e.target.value)}
-                  className="flex w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Additional notes..."
-                  rows={3}
-                />
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-                <Button variant="outline" onClick={closeModal} className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  Cancel
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto pointer-events-auto cursor-pointer">
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingItem ? 'Update Recurring' : 'Add Recurring'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </Modal>
+            <div className="flex justify-end gap-4 mt-8">
+              <Button type="button" onClick={closeModal} variant="outline" className="px-6 py-2 text-blue-700 border-blue-300 hover:bg-blue-50">Cancel</Button>
+              <Button type="submit" variant="default" className="px-6 py-2 flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white shadow-lg"><Save size={18}/>{editingItem ? 'Save' : 'Add'}</Button>
+            </div>
+          </form>
+        </FullscreenModal>
       </div>
     </div>
   );

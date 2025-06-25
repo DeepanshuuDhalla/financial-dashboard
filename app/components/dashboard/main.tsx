@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, 
-  Eye, EyeOff, MoreHorizontal, Filter, Search, 
-  Zap, Target, Brain, Activity, ChevronLeft, ChevronRight,
-  DollarSign, PieChart, BarChart3, Calendar, Download,
-  Settings, Bell, Plus, Minus, Star, AlertCircle, X
+  TrendingUp, ArrowUpRight, Eye, EyeOff, Filter, Search, 
+  Target, Brain, Activity, ChevronLeft, ChevronRight,
+  DollarSign, PieChart, BarChart3, Download,
+  Bell, Plus, Minus, Star, AlertCircle, X, Settings, Calendar
 } from 'lucide-react';
 import { 
-  LineChart, Line, XAxis, YAxis, ResponsiveContainer, 
-  Area, Cell, PieChart as RechartsPieChart, Pie,
-  BarChart, Bar, Tooltip, Legend, ComposedChart
+  XAxis, YAxis, ResponsiveContainer, 
+  Cell, PieChart as RechartsPieChart, Pie,
+  Tooltip, Legend, ComposedChart, Bar, Line
 } from 'recharts';
+import { useFinancialData } from '../../hooks/useFinancialData';
+import { FinancialData } from '../../hooks/useFinancialData';
+import { ForwardRefExoticComponent, RefAttributes } from 'react';
+import { LucideProps } from 'lucide-react';
 
 // Enhanced Shadcn-style components with white theme
 const Card = ({ children, className = "", gradient = false }: { children: React.ReactNode; className?: string; gradient?: boolean }) => (
@@ -20,7 +23,7 @@ const Card = ({ children, className = "", gradient = false }: { children: React.
 );
 
 const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string; }) => (
-  <div className={`p-6 ${className}`}>{children}</div>
+  <div className={`p-4 sm:p-6 ${className}`}>{children}</div>
 );
 
 const Button = ({ children, variant = "default", size = "default", className = "", ...props }: {
@@ -39,10 +42,10 @@ const Button = ({ children, variant = "default", size = "default", className = "
     danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm"
   };
   const sizes = {
-    default: "h-10 py-2 px-4 text-sm",
-    sm: "h-8 px-3 text-xs",
-    lg: "h-12 px-6 text-base",
-    icon: "h-10 w-10"
+    default: "h-9 py-2 px-3 text-sm sm:h-10 sm:px-4",
+    sm: "h-7 px-2 text-xs sm:h-8 sm:px-3",
+    lg: "h-10 px-4 text-sm sm:h-12 sm:px-6 sm:text-base",
+    icon: "h-9 w-9 sm:h-10 sm:w-10"
   };
   
   return (
@@ -69,7 +72,7 @@ const Badge = ({ children, variant = "default", className = "" }: {
   };
   
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${variants[variant]} ${className}`}>
       {children}
     </span>
   );
@@ -97,15 +100,50 @@ const Progress = ({ value, className = "", color = "blue" }: {
   );
 };
 
+// Transaction type
+type LucideIconType = ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
+
+type DashboardTransaction = {
+  id: number;
+  description: string;
+  amount: number;
+  category: string;
+  subcategory?: string;
+  date: string;
+  time?: string;
+  status?: string;
+  recurring: boolean;
+  account?: string;
+  merchant?: string;
+  type?: string;
+  impact?: string;
+  icon: LucideIconType | null;
+};
+
 const FinancialDashboard = () => {
+  const { data, showMockWarning, onRealDataAdded } = useFinancialData();
+  const safeData: Partial<FinancialData> = data || {};
+  const monthlyIncome: number = safeData?.monthlyIncome ?? 5000;
+  const monthlyExpenses: number = safeData?.monthlyExpenses ?? 3200;
+  const totalBalance: number = safeData?.totalBalance ?? 25000;
+  const investments: number = safeData?.investments ?? 12000;
+  const debts: number = safeData?.debts ?? 4000;
+  const creditScore: number = safeData?.creditScore ?? 760;
+  const monthlyData = React.useMemo(() => safeData?.monthlyData ?? [
+    { month: 'Jan', income: 5000, expenses: 3200, netWorth: 20000 },
+    { month: 'Feb', income: 5100, expenses: 3300, netWorth: 21000 },
+    { month: 'Mar', income: 5200, expenses: 3400, netWorth: 22000 },
+    { month: 'Apr', income: 5300, expenses: 3500, netWorth: 23000 },
+    { month: 'May', income: 5400, expenses: 3600, netWorth: 24000 },
+    { month: 'Jun', income: 5500, expenses: 3700, netWorth: 25000 },
+  ], [safeData?.monthlyData]);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMetric, setSelectedMetric] = useState('netWorth');
-  const [selectedPeriod, setSelectedPeriod] = useState('6m');
+  const [selectedPeriod, setSelectedPeriod] = useState<'3m' | '6m' | '1y' | '2y'>('6m');
   const [activeInsight, setActiveInsight] = useState(0);
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
-  const [transactionForm, setTransactionForm] = useState({
+  const [transactionForm, setTransactionForm] = useState<Omit<DashboardTransaction, 'id' | 'impact' | 'icon'>>({
     description: '',
     amount: 0,
     category: 'Food',
@@ -117,6 +155,8 @@ const FinancialDashboard = () => {
     type: 'debit',
     recurring: false
   });
+  const [editTransaction, setEditTransaction] = useState<DashboardTransaction | null>(null);
+  const [deleteTransaction, setDeleteTransaction] = useState<DashboardTransaction | null>(null);
 
   // Enhanced transactions with better categorization
   const transactions = [
@@ -132,25 +172,7 @@ const FinancialDashboard = () => {
     { id: 10, description: 'Gym Membership', amount: -49.99, category: 'Health', date: '2024-06-11', recurring: true, impact: 'positive', icon: Activity }
   ];
   const itemsPerPage = 6;
-  const [dashboardTransactions, setDashboardTransactions] = useState<typeof transactions>(transactions);
-
-  // Enhanced financial data with more realistic numbers
-  const baseData = {
-    totalBalance: 15420.75,
-    monthlyIncome: 4800.00,
-    monthlyExpenses: 3250.00,
-    investments: 12800.00,
-    debts: 3200.00,
-    creditScore: 742,
-    monthlyData: [
-      { month: 'Jan', income: 4500, expenses: 3100, investments: 11200, savings: 1400, netWorth: 23100 },
-      { month: 'Feb', income: 4650, expenses: 2950, investments: 11800, savings: 1700, netWorth: 24200 },
-      { month: 'Mar', income: 4750, expenses: 3200, investments: 12100, savings: 1550, netWorth: 24850 },
-      { month: 'Apr', income: 4900, expenses: 3150, investments: 12400, savings: 1750, netWorth: 25600 },
-      { month: 'May', income: 4800, expenses: 3300, investments: 12600, savings: 1500, netWorth: 26100 },
-      { month: 'Jun', income: 4800, expenses: 3250, investments: 12800, savings: 1550, netWorth: 26650 }
-    ]
-  };
+  const [dashboardTransactions, setDashboardTransactions] = useState(transactions);
 
   // Expense breakdown for pie chart
   const expenseBreakdown = [
@@ -174,11 +196,11 @@ const FinancialDashboard = () => {
 
   // Advanced calculations
   const analytics = useMemo(() => {
-    const savingsRate = ((baseData.monthlyIncome - baseData.monthlyExpenses) / baseData.monthlyIncome * 100);
-    const netWorth = baseData.totalBalance + baseData.investments - baseData.debts;
-    const debtToIncomeRatio = (baseData.debts / (baseData.monthlyIncome * 12) * 100);
-    const monthlyNetCashFlow = baseData.monthlyIncome - baseData.monthlyExpenses;
-    const emergencyFundRatio = baseData.totalBalance / baseData.monthlyExpenses;
+    const savingsRate = ((monthlyIncome - monthlyExpenses) / monthlyIncome * 100);
+    const netWorth = totalBalance + investments - debts;
+    const debtToIncomeRatio = (debts / (monthlyIncome * 12) * 100);
+    const monthlyNetCashFlow = monthlyIncome - monthlyExpenses;
+    const emergencyFundRatio = totalBalance / monthlyExpenses;
     const investmentGrowthRate = 9.2;
     const financialFreedomScore = Math.min(100, (savingsRate + (100 - debtToIncomeRatio) + emergencyFundRatio * 8) / 3);
     
@@ -189,23 +211,23 @@ const FinancialDashboard = () => {
       monthlyNetCashFlow,
       emergencyFundRatio: emergencyFundRatio.toFixed(1),
       financialFreedomScore: Math.round(financialFreedomScore),
-      burnRate: (baseData.monthlyExpenses / 30).toFixed(0),
+      burnRate: (monthlyExpenses / 30).toFixed(0),
       wealthVelocity: ((monthlyNetCashFlow / netWorth * 100) * 12).toFixed(1),
       projectedNetWorth: netWorth * Math.pow(1 + investmentGrowthRate/100, 1),
       creditUtilization: 23,
       monthlyGrowth: 2.1
     };
-  }, [baseData]);
+  }, [monthlyIncome, monthlyExpenses, totalBalance, investments, debts]);
 
   // Enhanced chart data
   const chartData = useMemo(() => {
-    return baseData.monthlyData.map((month, index) => ({
+    return monthlyData.map((month: { income: number; expenses: number; netWorth: number; month: string }, index: number) => ({
       ...month,
       savingsRate: ((month.income - month.expenses) / month.income * 100),
       efficiency: ((month.income / month.expenses) * 100) - 100,
-      growthRate: index > 0 ? ((month.netWorth - baseData.monthlyData[index-1].netWorth) / baseData.monthlyData[index-1].netWorth * 100) : 0
+      growthRate: index > 0 ? ((month.netWorth - monthlyData[index-1].netWorth) / monthlyData[index-1].netWorth * 100) : 0
     }));
-  }, [baseData.monthlyData]);
+  }, [monthlyData]);
 
   // Smart insights
   const insights = [
@@ -233,7 +255,7 @@ const FinancialDashboard = () => {
   ];
 
   // Filtered and paginated transactions
-  const filteredTransactions = dashboardTransactions.filter(t => 
+  const filteredTransactions = dashboardTransactions.filter((t: DashboardTransaction) => 
     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -245,13 +267,6 @@ const FinancialDashboard = () => {
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
-  const metricOptions = [
-    { key: 'netWorth', label: 'Net Worth', color: '#3b82f6' },
-    { key: 'savingsRate', label: 'Savings Rate', color: '#10b981' },
-    { key: 'investments', label: 'Investments', color: '#8b5cf6' },
-    { key: 'income', label: 'Income', color: '#f59e0b' }
-  ];
-
   const periodOptions = [
     { key: '3m', label: '3M' },
     { key: '6m', label: '6M' },
@@ -260,7 +275,7 @@ const FinancialDashboard = () => {
   ];
 
   const categories = ['Food', 'Housing', 'Transportation', 'Utilities', 'Entertainment', 'Health', 'Investment', 'Other'];
-  const subcategories: Record<string, string[]> = {
+  const subcategories: { [key: string]: string[] } = {
     Food: ['Groceries', 'Dining Out', 'Coffee'],
     Housing: ['Rent', 'Mortgage', 'Maintenance'],
     Transportation: ['Fuel', 'Public Transit', 'Taxi'],
@@ -287,15 +302,18 @@ const FinancialDashboard = () => {
     });
     setIsAddTransactionOpen(true);
   };
+  
   const closeAddTransaction = () => setIsAddTransactionOpen(false);
+  
   const handleTransactionFormChange = (field: string, value: any) => {
     setTransactionForm(prev => ({ ...prev, [field]: value }));
   };
-  const handleAddTransactionSubmit = (e: React.FormEvent) => {
+  
+  const handleAddTransactionSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setDashboardTransactions((prev: typeof transactions) => [
+    setDashboardTransactions(prev => [
       {
-        id: Math.max(0, ...prev.map((t: typeof transactions[0]) => t.id)) + 1,
+        id: Math.max(0, ...prev.map(t => t.id)) + 1,
         description: transactionForm.description,
         amount: transactionForm.type === 'debit' ? -Math.abs(transactionForm.amount) : Math.abs(transactionForm.amount),
         category: transactionForm.category,
@@ -313,72 +331,191 @@ const FinancialDashboard = () => {
       ...prev
     ]);
     setIsAddTransactionOpen(false);
+    onRealDataAdded();
   };
 
+  // Period filtering for chart
+  const periodMonths = {
+    '3m': 3,
+    '6m': 6,
+    '1y': 12,
+    '2y': 24
+  };
+  const filteredChartData = useMemo(() => {
+    const months = periodMonths[selectedPeriod] || 6;
+    return chartData.slice(-months);
+  }, [chartData, selectedPeriod]);
+
+  // Export CSV logic
+  const handleExport = () => {
+    const csv = [
+      ['Description', 'Amount', 'Category', 'Date', 'Impact'],
+      ...dashboardTransactions.map(t => [
+        t.description,
+        t.amount,
+        t.category,
+        t.date,
+        t.impact
+      ])
+    ].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transactions.csv';
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 500);
+  };
+
+  // Edit/Delete logic
+  const openEditModal = (transaction: DashboardTransaction) => {
+    setEditTransaction(transaction);
+  };
+  const closeEditModal = () => {
+    setEditTransaction(null);
+  };
+  const openDeleteModal = (transaction: DashboardTransaction) => {
+    setDeleteTransaction(transaction);
+  };
+  const closeDeleteModal = () => {
+    setDeleteTransaction(null);
+  };
+  const handleEditSubmit = (updated: DashboardTransaction) => {
+    setDashboardTransactions(prev => prev.map(t => {
+      return t.id === updated.id
+        ? {
+            ...t,
+            ...updated,
+            recurring: updated.recurring ?? false,
+            icon: updated.icon ?? null
+          }
+        : t;
+    }));
+    closeEditModal();
+  };
+  const handleDeleteConfirm = () => {
+    setDashboardTransactions(prev => prev.filter(t => t.id !== (deleteTransaction ? deleteTransaction.id : -1)));
+    closeDeleteModal();
+  };
+
+  // QuickAction logic
   const handleQuickAction = (action: string) => {
     if (action === 'add-transaction') {
       openAddTransaction();
       return;
     }
-    console.log(`Executing action: ${action}`);
-    // Here you would implement actual functionality
+    if (action === 'analyze-expenses') {
+      // Implement analyze expenses logic
+      return;
+    }
+    if (action === 'rebalance') {
+      // Implement rebalance logic
+      return;
+    }
+    if (action === 'export') {
+      handleExport();
+      return;
+    }
+    if (action === 'set-budget') {
+      alert('Budget setting coming soon!');
+      return;
+    }
+    if (action === 'schedule-payment') {
+      alert('Payment scheduling coming soon!');
+      return;
+    }
+    if (action === 'investment-alert') {
+      alert('Investment alerts coming soon!');
+      return;
+    }
+    if (action === 'debt-payoff') {
+      alert('Debt payoff planner coming soon!');
+      return;
+    }
+    if (action === 'savings-goal') {
+      alert('Savings goal creation coming soon!');
+      return;
+    }
+    if (action === 'financial-report') {
+      alert('Financial report download coming soon!');
+      return;
+    }
+    if (action.startsWith('edit-')) {
+      const id = parseInt(action.replace('edit-', ''));
+      const tx = dashboardTransactions.find(t => t.id === id);
+      if (tx) openEditModal(tx);
+      return;
+    }
+    if (action.startsWith('delete-')) {
+      const id = parseInt(action.replace('delete-', ''));
+      const tx = dashboardTransactions.find(t => t.id === id);
+      if (tx) openDeleteModal(tx);
+      return;
+    }
+    // Default fallback
+    alert('Feature coming soon!');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         
         {/* Enhanced Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
               Financial Dashboard
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm sm:text-base md:text-lg">
               Intelligent insights for smarter financial decisions
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="default" onClick={() => handleQuickAction('export')}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button variant="outline" size="default" onClick={() => handleQuickAction('export')} className="justify-center">
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" size="default" onClick={() => handleQuickAction('settings')}>
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </Button>
-            <Button size="default" onClick={() => handleQuickAction('add-transaction')}>
+            <Button size="default" onClick={() => handleQuickAction('add-transaction')} className="justify-center">
               <Plus className="w-4 h-4 mr-2" />
-              Add Transaction
+              <span className="hidden sm:inline">Add Transaction</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
 
+        {showMockWarning && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-semibold">
+            Test version: Showing mock data.
+          </div>
+        )}
+
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           
           {/* Net Worth Card */}
           <Card className="relative overflow-hidden" gradient>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="w-5 h-5 text-blue-600" />
+                    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                   </div>
-                  <span className="text-sm font-medium text-gray-700">Net Worth</span>
+                  <span className="text-xs sm:text-sm font-medium text-gray-700">Net Worth</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setBalanceVisible(!balanceVisible)}>
                   {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </Button>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                   {balanceVisible ? `$${analytics.netWorth.toLocaleString()}` : '••••••••'}
                 </div>
                 <div className="flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                  <span className="text-green-600 font-medium text-sm">+{analytics.wealthVelocity}%</span>
-                  <span className="text-gray-500 text-sm">annual growth</span>
+                  <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+                  <span className="text-green-600 font-medium text-xs sm:text-sm">+{analytics.wealthVelocity}%</span>
+                  <span className="text-gray-500 text-xs sm:text-sm">annual growth</span>
                 </div>
               </div>
             </CardContent>
@@ -386,16 +523,16 @@ const FinancialDashboard = () => {
 
           {/* Financial Health Score */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-green-100 rounded-lg">
-                  <Brain className="w-5 h-5 text-green-600" />
+                  <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Health Score</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-700">Health Score</span>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold text-gray-900">{analytics.financialFreedomScore}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">{analytics.financialFreedomScore}</span>
                   <Badge variant="success">Excellent</Badge>
                 </div>
                 <Progress value={analytics.financialFreedomScore} color="green" />
@@ -408,20 +545,20 @@ const FinancialDashboard = () => {
 
           {/* Monthly Savings */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Target className="w-5 h-5 text-yellow-600" />
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Monthly Savings</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-700">Monthly Savings</span>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                   ${analytics.monthlyNetCashFlow.toLocaleString()}
                 </div>
                 <div className="flex items-center justify-between">
                   <Badge variant="success">{analytics.savingsRate}% rate</Badge>
-                  <span className="text-sm text-gray-500">{analytics.emergencyFundRatio}mo runway</span>
+                  <span className="text-xs sm:text-sm text-gray-500">{analytics.emergencyFundRatio}mo runway</span>
                 </div>
               </div>
             </CardContent>
@@ -429,19 +566,19 @@ const FinancialDashboard = () => {
 
           {/* Credit Score */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-purple-100 rounded-lg">
-                  <Star className="w-5 h-5 text-purple-600" />
+                  <Star className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">Credit Score</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-700">Credit Score</span>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold text-gray-900">{baseData.creditScore}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">{creditScore}</span>
                   <Badge variant="success">Very Good</Badge>
                 </div>
-                <Progress value={(baseData.creditScore - 300) / 5.5} color="blue" />
+                <Progress value={(creditScore - 300) / 5.5} color="blue" />
                 <div className="text-xs text-gray-500">
                   {analytics.creditUtilization}% utilization
                 </div>
@@ -451,32 +588,33 @@ const FinancialDashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           
           {/* Wealth Growth Trend */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Wealth Growth</h3>
-                  <p className="text-sm text-gray-600">Track your financial progress over time</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Wealth Growth</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">Track your financial progress over time</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto">
                   {periodOptions.map((period) => (
                     <Button
                       key={period.key}
                       variant={selectedPeriod === period.key ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedPeriod(period.key)}
+                      onClick={() => setSelectedPeriod(period.key as '3m' | '6m' | '1y' | '2y')}
+                      className="whitespace-nowrap"
                     >
                       {period.label}
                     </Button>
                   ))}
                 </div>
               </div>
-              <div className="h-80">
+              <div className="h-64 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData}>
+                  <ComposedChart data={filteredChartData}>
                     <XAxis dataKey="month" stroke="#9ca3af" />
                     <YAxis stroke="#9ca3af" />
                     <Tooltip 
@@ -499,35 +637,35 @@ const FinancialDashboard = () => {
 
           {/* Expense Breakdown */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex justify-between items-center mb-6">
+            <CardContent>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Expense Breakdown</h3>
-                  <p className="text-sm text-gray-600">Monthly spending by category</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Expense Breakdown</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">Monthly spending by category</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleQuickAction('analyze-expenses')}>
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Analyze
                 </Button>
               </div>
-              <div className="h-80">
+              <div className="h-64 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
                       data={expenseBreakdown}
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percentage }: { name: string, percentage: number }) => `${name} ${percentage}%`}
+                      label={({ name, percentage }) => `${name} ${percentage}%`}
                     >
                       {expenseBreakdown.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number) => [`$${value}`, 'Amount']}
+                      formatter={(value) => [`$${value}`, 'Amount']}
                       contentStyle={{ 
                         backgroundColor: 'white', 
                         border: '1px solid #e5e7eb',
@@ -544,20 +682,20 @@ const FinancialDashboard = () => {
 
         {/* Investment Allocation */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-6">
+          <CardContent>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Investment Portfolio</h3>
-                <p className="text-sm text-gray-600">Asset allocation and performance</p>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Investment Portfolio</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Asset allocation and performance</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => handleQuickAction('rebalance')}>
                 <Target className="w-4 h-4 mr-2" />
                 Rebalance
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {investmentAllocation.map((asset, index) => (
-                <div key={`investment-${asset.name}-${index}`} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div key={`investment-${asset.name}-${index}`} className="p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="text-center space-y-2">
                     <div className="text-lg font-semibold text-gray-900">{asset.name}</div>
                     <div className="text-2xl font-bold text-blue-600">${asset.value.toLocaleString()}</div>
@@ -870,7 +1008,7 @@ const FinancialDashboard = () => {
                       onChange={e => handleTransactionFormChange('subcategory', e.target.value)}
                       className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {(subcategories[transactionForm.category] || []).map(subcategory => (
+                      {(subcategories[transactionForm.category] || []).map((subcategory: string) => (
                         <option key={subcategory} value={subcategory}>{subcategory}</option>
                       ))}
                     </select>

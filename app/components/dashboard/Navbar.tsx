@@ -10,30 +10,38 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Globe,
-  Zap,
-  Shield,
-  Command
+  Zap
 } from 'lucide-react';
 import { useFinancialData } from '../../hooks/useFinancialData';
+import { useAuth } from '../../hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
-  currentRoute: string;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, sidebarOpen, currentRoute }) => {
+const MOCK_USER = {
+  name: 'Demo User',
+  email: 'demo@financeflow.com',
+  avatar: 'https://ui-avatars.com/api/?name=Demo+User&background=0D8ABC&color=fff',
+};
+const MOCK_NOTIFICATIONS = [
+  { id: 1, type: 'goal', title: 'Welcome to FinanceFlow!', message: 'Start by adding your first account.', read: false, createdAt: new Date().toISOString() },
+  { id: 2, type: 'transaction', title: 'Demo Transaction', message: 'Try adding a transaction to see insights.', read: false, createdAt: new Date().toISOString() },
+];
+
+const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState<boolean>(false);
-  const [searchFocused, setSearchFocused] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const { data, loading } = useFinancialData();
+  const { data } = useFinancialData();
+  const { signOut } = useAuth();
+  const router = useRouter();
 
-  const user = data?.user;
-  const notifications = data?.notifications || [];
+  const user = data?.user || MOCK_USER;
+  const notifications = data?.notifications?.length ? data.notifications : MOCK_NOTIFICATIONS;
   const unreadCount = notifications.filter((n: any) => !n.read).length;
 
   useEffect(() => {
@@ -56,14 +64,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, sidebarOpen, currentRo
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  if (loading || !data) return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b border-gray-200/50 shadow-sm">
-      <div className="flex items-center justify-between px-4 lg:px-6 h-16">
-        <div className="flex items-center space-x-4 animate-pulse h-10 w-32 bg-gray-100 rounded" />
-      </div>
-    </nav>
-  );
+  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    await signOut();
+    router.push('/');
+  };
 
+  // Always render the full navbar, never a loading skeleton
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-b border-gray-200/50 shadow-sm">
       <div className="flex items-center justify-between px-4 lg:px-6 h-16">
@@ -107,7 +113,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, sidebarOpen, currentRo
         </div>
 
         {/* Center Section - Enhanced Search */}
-     
+        {/* (You can add a search bar here if needed) */}
 
         {/* Right Section */}
         <div className="flex items-center space-x-2">
@@ -201,24 +207,15 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, sidebarOpen, currentRo
                 <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                   <Settings className="w-4 h-4 mr-2" /> Settings
                 </button>
-                <button className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 flex items-center space-x-2">
+                <button
+                  className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 flex items-center space-x-2 border-t border-gray-100"
+                  onClick={handleLogout}
+                >
                   <LogOut className="w-4 h-4 mr-2" /> Logout
                 </button>
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Search Bar */}
-      <div className="md:hidden px-4 pb-4 border-t border-gray-100/50">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search or ask AI..."
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400/50 text-sm backdrop-blur-sm"
-          />
         </div>
       </div>
     </nav>
